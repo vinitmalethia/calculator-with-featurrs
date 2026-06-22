@@ -32,7 +32,7 @@ const calculators = [
 
 const popularSlugs = ["emi-calculator","sip-calculator","percentage-calculator","bmi-calculator"];
 const grids = { "India Finance":"indiaGrid", International:"internationalGrid", Student:"studentGrid", Health:"healthGrid" };
-const state = { current: null, resultText: "", resultValue: "", chart: null, subjectCount: 5, currency: "" };
+const state = { current: null, resultText: "", resultValue: "", chart: null, subjectCount: 3, nextSubjectId: 3, currency: "" };
 const storageKeys = { favorites:"allcalco-favorites", recent:"allcalco-recent", history:"allcalco-history", currency:"allcalco-currency", autoCalculate:"allcalco-auto-calculate" };
 const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
@@ -160,6 +160,16 @@ function renderBreakdownChart(chart) {
   target.hidden=false;
 }
 
+const escapeHTML = value => String(value).replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+
+function renderCalculationSteps(steps) {
+  const target=document.getElementById("calculationStepsContent");
+  if(!target)return;
+  if(!steps){target.closest("details").hidden=true;target.replaceChildren();return;}
+  target.innerHTML=`<p class="steps-formula">${escapeHTML(steps.formula)}</p><ol>${steps.lines.map(line=>`<li>${escapeHTML(line)}</li>`).join("")}</ol><p><strong>${escapeHTML(steps.totalLine)}</strong></p><p><strong>${escapeHTML(steps.finalLine)}</strong></p>`;
+  target.closest("details").hidden=false;
+}
+
 function calculatorPreferencesMarkup() {
   const enabled=readLocal(storageKeys.autoCalculate,true)!==false;
   return `<div class="calculator-preferences"><span>Calculation settings</span><label class="toggle-control"><input id="autoCalculate" type="checkbox" ${enabled?"checked":""}><span aria-hidden="true"></span>Update results automatically</label></div>`;
@@ -181,11 +191,11 @@ function workedExampleMarkup(calc) {
 }
 
 function cgpaMarkup() {
-  return `<div class="cgpa-setup"><div class="field"><label for="subjectCount">Number of Semesters/Subjects</label><div class="input-shell"><input id="subjectCount" type="number" min="1" max="30" value="5" inputmode="numeric"></div></div><button class="button button-primary" id="setSubjects" type="button">Set</button></div><div class="subject-head" aria-hidden="true"><span>Subject label</span><span>Grade points</span><span>Credits</span></div><div id="subjectRows"></div>`;
+  return `<div class="subject-head" aria-hidden="true"><span>Subject label</span><span>Grade points</span><span>Credits</span><span></span></div><div id="subjectRows"></div><button class="button add-subject-button" id="addSubject" type="button">${iconSvg("plus")} Add Subject</button>`;
 }
 
 function subjectRow(index) {
-  return `<div class="subject-row"><div class="field"><label class="sr-only" for="subject${index}">Subject ${index + 1} label</label><div class="input-shell"><input id="subject${index}" class="subject-label" type="text" placeholder="e.g. Mathematics"></div></div><div class="field"><label class="sr-only" for="grade${index}">Subject ${index + 1} grade points</label><div class="input-shell"><input id="grade${index}" class="subject-grade" type="number" min="0" max="10" step="0.01" placeholder="Points" required></div><input class="smart-slider subject-slider" type="range" data-range-for="grade${index}" min="0" max="10" step="0.1" value="0" aria-label="Adjust subject ${index + 1} grade points"></div><div class="field"><label class="sr-only" for="credits${index}">Subject ${index + 1} credits</label><div class="input-shell"><input id="credits${index}" class="subject-credit" type="number" min="0.5" step="0.5" placeholder="Credits" required></div><input class="smart-slider subject-slider" type="range" data-range-for="credits${index}" min="0.5" max="10" step="0.5" value="0.5" aria-label="Adjust subject ${index + 1} credits"></div></div>`;
+  return `<div class="subject-row" data-subject-row><div class="field"><label class="sr-only" for="subject${index}">Subject label</label><div class="input-shell"><input id="subject${index}" class="subject-label" type="text" placeholder="e.g. Mathematics"></div></div><div class="field"><label class="sr-only" for="grade${index}">Grade points</label><div class="input-shell"><input id="grade${index}" class="subject-grade" type="number" min="0" max="10" step="0.01" placeholder="Points" required></div><input class="smart-slider subject-slider" type="range" data-range-for="grade${index}" min="0" max="10" step="0.1" value="0" aria-label="Adjust grade points"></div><div class="field"><label class="sr-only" for="credits${index}">Credits</label><div class="input-shell"><input id="credits${index}" class="subject-credit" type="number" min="0.5" step="0.5" placeholder="Credits" required></div><input class="smart-slider subject-slider" type="range" data-range-for="credits${index}" min="0.5" max="10" step="0.5" value="0.5" aria-label="Adjust credits"></div><button class="remove-subject-button" type="button" data-remove-subject aria-label="Remove subject row">${iconSvg("x")}</button></div>`;
 }
 
 function detailSidebarMarkup(calc) {
@@ -245,7 +255,8 @@ function renderCalculator(calc) {
   const faq = faqFor(calc);
   document.getElementById("faqSchema").textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":faq.faqs.map(([q,a])=>({"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}}))});
   const view = document.getElementById("calculatorView");
-  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><div class="result-value-row"><p class="result-value" id="resultValue"></p><button class="result-copy" type="button" id="copyResult" aria-label="Copy result" title="Copy result">${iconSvg("clipboard")}</button></div><p class="result-detail" id="resultDetail"></p><section class="result-breakdown" id="resultBreakdown" hidden></section><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
+  const steps=calc.custom==="cgpa"?`<details class="calculation-steps" hidden><summary>Show Formula &amp; Steps</summary><div id="calculationStepsContent"></div></details>`:"";
+  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><div class="result-value-row"><p class="result-value" id="resultValue"></p><button class="result-copy" type="button" id="copyResult" aria-label="Copy result" title="Copy result">${iconSvg("clipboard")}</button></div><p class="result-detail" id="resultDetail"></p><section class="result-breakdown" id="resultBreakdown" hidden></section>${steps}<div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
   const relatedMarkup = `<section class="content-card"><h2>Related calculators</h2><div class="related-links">${related.map(c=>`<a href="#${c.slug}">${c.name}</a>`).join("")}</div></section>${historyMarkup(calc)}`;
   const ad = `<div class="ad-placeholder detail-ad" data-ad-slot="calculator-detail"><!-- Ad network content is injected only when active. --></div>`;
   let body;
@@ -267,7 +278,7 @@ function renderCalculator(calc) {
 
 function renderSubjectRows(count) {
   state.subjectCount = Math.max(1, Math.min(30, count));
-  document.getElementById("subjectCount").value = state.subjectCount;
+  state.nextSubjectId=state.subjectCount;
   document.getElementById("subjectRows").innerHTML = Array.from({length:state.subjectCount},(_,i)=>subjectRow(i)).join("");
 }
 
@@ -297,8 +308,8 @@ function fillExample(calc, form) {
   form.reset();
   setTimeout(()=>{
     if(calc.custom==="cgpa"){
-      renderSubjectRows(5);
-      const labels=["Mathematics","Science","English","Computing","Elective"],grades=[8,9,8.5,9,7.5];
+      renderSubjectRows(3);
+      const labels=["Mathematics","Science","English"],grades=[8,9,8.5];
       document.querySelectorAll(".subject-label").forEach((input,index)=>input.value=labels[index]);
       document.querySelectorAll(".subject-grade").forEach((input,index)=>input.value=grades[index]);
       document.querySelectorAll(".subject-credit").forEach(input=>input.value=4);
@@ -313,8 +324,9 @@ function fillExample(calc, form) {
 function wireCalculator(calc) {
   const form = document.getElementById("calculatorForm");
   if (calc.custom === "cgpa") {
-    renderSubjectRows(5);
-    document.getElementById("setSubjects").addEventListener("click", () => renderSubjectRows(Number(document.getElementById("subjectCount").value)));
+    renderSubjectRows(3);
+    document.getElementById("addSubject").addEventListener("click",()=>{if(state.subjectCount>=30){showToast("Maximum 30 subjects");return;}const rows=document.getElementById("subjectRows");rows.insertAdjacentHTML("beforeend",subjectRow(state.nextSubjectId++));state.subjectCount++;const latest=rows.querySelector(".subject-row:last-child .subject-label");latest?.focus();showToast("Subject added");});
+    document.getElementById("subjectRows").addEventListener("click",e=>{const button=e.target.closest("[data-remove-subject]");if(!button)return;if(state.subjectCount<=1){showToast("Keep at least one subject");return;}button.closest("[data-subject-row]")?.remove();state.subjectCount--;form.dispatchEvent(new Event("input",{bubbles:true}));showToast("Subject removed");});
     document.getElementById("quickPercentageButton").addEventListener("click", () => { const cgpa=Number(document.getElementById("quickCgpa").value),out=document.getElementById("quickPercentageResult"); out.textContent=Number.isFinite(cgpa)&&cgpa>=0&&cgpa<=10?`${number(cgpa*9.5)}% (indicative)`:"Enter a CGPA from 0 to 10."; });
     document.getElementById("quickSgpaButton").addEventListener("click", () => { const values=document.getElementById("quickSgpa").value.split(",").map(v=>Number(v.trim())).filter(Number.isFinite),out=document.getElementById("quickSgpaResult"); out.textContent=values.length?`Average: ${number(values.reduce((a,b)=>a+b,0)/values.length,3)}`:"Enter SGPAs separated by commas."; });
   }
@@ -322,7 +334,7 @@ function wireCalculator(calc) {
   if(currencySelect){const updateCurrency=()=>{state.currency=currencySelect.value;writeLocal(storageKeys.currency,state.currency);const symbol={INR:"₹",USD:"$",GBP:"£",EUR:"€"}[state.currency];document.querySelectorAll(".money-affix").forEach(item=>item.textContent=symbol);["resultValue","resultDetail"].forEach(id=>{const item=document.getElementById(id);if(item)item.textContent=item.textContent.replace(/[₹$£€]/g,symbol);});state.resultText=state.resultText.replace(/[₹$£€]/g,symbol);updateFormattedValues(form);if(state.chart)renderBreakdownChart(state.chart);};updateCurrency();currencySelect.addEventListener("change",updateCurrency);}
   updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc);
   form.addEventListener("submit", e => { e.preventDefault(); calculate(calc,true); });
-  form.addEventListener("reset", () => setTimeout(() => { document.getElementById("resultBox").hidden = true; document.getElementById("formError").textContent = ""; if(calc.custom === "cgpa")renderSubjectRows(5);updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc); },0));
+  form.addEventListener("reset", () => setTimeout(() => { document.getElementById("resultBox").hidden = true; document.getElementById("formError").textContent = ""; if(calc.custom === "cgpa")renderSubjectRows(3);updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc); },0));
   form.addEventListener("click",e=>{const button=e.target.closest(".preset-button");if(!button)return;const field=document.getElementById(button.dataset.presetField);if(!field)return;field.value=button.dataset.presetValue;field.dispatchEvent(new Event("input",{bubbles:true}));field.dispatchEvent(new Event("change",{bubbles:true}));syncPresetButtons(form);});
   document.getElementById("loadExample").addEventListener("click",()=>fillExample(calc,form));
   const autoCalculate=document.getElementById("autoCalculate");
@@ -344,9 +356,10 @@ function calculate(calc, focusResult = true) {
     if (calc.custom === "cgpa") {
       const credits=[...document.querySelectorAll(".subject-credit")].map(i=>Number(i.value));
       const grades=[...document.querySelectorAll(".subject-grade")].map(i=>Number(i.value));
+      const labels=[...document.querySelectorAll(".subject-label")].map((input,index)=>input.value.trim()||`Subject ${index+1}`);
       if(credits.some(v=>!Number.isFinite(v)||v<=0)||grades.some(v=>!Number.isFinite(v)||v<0||v>10))throw new Error("Enter valid credits and grade points from 0 to 10 for every subject.");
       const total=credits.reduce((a,b)=>a+b,0),points=credits.reduce((sum,c,i)=>sum+c*grades[i],0);
-      result={value:number(points/total,3),detail:`Total credit points: ${number(points)} · Total credits: ${number(total)}`};
+      result={value:number(points/total,3),detail:`Total credit points: ${number(points)} · Total credits: ${number(total)}`,steps:{formula:"CGPA = Total Credit Points ÷ Total Credits",lines:credits.map((credit,index)=>`${labels[index]}: ${number(credit)} credits × ${number(grades[index])} grade points = ${number(credit*grades[index])} credit points`),totalLine:`Total credit points = ${number(points)}; Total credits = ${number(total)}`,finalLine:`CGPA = ${number(points)} ÷ ${number(total)} = ${number(points/total,3)}`}};
     } else {
       const values={};
       calc.fields.forEach(f=>{const el=document.getElementById(f.id);values[f.id]=f.type==="number"?Number(el.value):el.value;if(f.type==="select"&&!Number.isNaN(Number(values[f.id]))&&values[f.id]!=="")values[f.id]=Number(values[f.id]);});
@@ -361,6 +374,7 @@ function calculate(calc, focusResult = true) {
     document.getElementById("resultValue").textContent=result.value;
     document.getElementById("resultDetail").textContent=result.detail;
     state.chart=result.chart||null;renderBreakdownChart(state.chart);
+    renderCalculationSteps(result.steps||null);
     const box=document.getElementById("resultBox");box.hidden=false;if(focusResult)box.focus();
     state.resultText=`${calc.name}: ${result.value}. ${result.detail}`;
     state.resultValue=result.value;

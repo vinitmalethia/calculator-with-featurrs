@@ -397,11 +397,17 @@ body { font-size: 15px; background: var(--bg); }
 .cgpa-form-content { display: block; }
 .cgpa-setup { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; margin-bottom: 19px; }
 .cgpa-setup .button { min-width: 60px; min-height: 47px; }
-.subject-head { display: grid; grid-template-columns: 1.08fr 1fr 1fr; gap: 10px; padding: 0 7px 8px; color: var(--text); font-size: .65rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
-.cgpa-tool-card .subject-row { display: grid; grid-template-columns: 1.08fr 1fr 1fr; gap: 10px; padding: 9px 10px; margin-bottom: 8px; border: 0; border-radius: 5px; background: color-mix(in srgb, var(--bg) 75%, var(--surface)); }
+.subject-head { display: grid; grid-template-columns: 1.08fr 1fr 1fr 36px; gap: 10px; padding: 0 7px 8px; color: var(--text); font-size: .65rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.cgpa-tool-card .subject-row { position: relative; display: grid; grid-template-columns: 1.08fr 1fr 1fr auto; gap: 10px; align-items: start; padding: 9px 10px; margin-bottom: 8px; border: 0; border-radius: 5px; background: color-mix(in srgb, var(--bg) 75%, var(--surface)); }
 .cgpa-tool-card .subject-row .input-shell { background: var(--surface); }
 .cgpa-tool-card .subject-row input { min-height: 36px; padding: 7px 9px; font-size: .75rem; }
 .cgpa-tool-card .subject-slider { margin-top: 5px; }
+.remove-subject-button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); background: var(--surface); cursor: pointer; }
+.remove-subject-button:hover, .remove-subject-button:focus-visible { color: var(--danger); border-color: var(--danger); }
+.remove-subject-button .icon { width: 15px; height: 15px; }
+.add-subject-button { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; margin-top: 12px; color: var(--primary); border-color: var(--primary); background: color-mix(in srgb, var(--primary) 6%, var(--surface)); }
+.add-subject-button:hover { color: #fff; background: var(--primary); }
+.add-subject-button .icon { width: 16px; height: 16px; }
 .cgpa-tool-card .button-row { margin-top: 20px; }
 .cgpa-tool-card .button { min-height: 44px; }
 .cgpa-tool-card .result-box { margin-bottom: 2px; }
@@ -424,6 +430,13 @@ body { font-size: 15px; background: var(--bg); }
 .history-item strong { color: var(--primary); font-size: .85rem; }
 .history-item span, .history-item time { color: var(--muted); font-size: .68rem; }
 .history-note { margin-bottom: 0; font-size: .68rem !important; }
+.calculation-steps { margin-top: 16px; border-top: 1px solid var(--border); }
+.calculation-steps summary { padding: 13px 0 7px; color: var(--primary); cursor: pointer; font-size: .76rem; font-weight: 800; }
+.calculation-steps > div { padding: 6px 0 2px; color: var(--muted); font-size: .75rem; }
+.calculation-steps ol { margin: 8px 0; padding-left: 20px; }
+.calculation-steps li { margin-bottom: 5px; }
+.calculation-steps p { margin: 7px 0; }
+.steps-formula { padding: 9px 10px; border-radius: 4px; color: var(--text); background: var(--surface); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .toast { position: fixed; z-index: 80; right: 18px; bottom: 18px; max-width: min(340px, calc(100% - 36px)); padding: 11px 14px; border: 1px solid #315f9f; border-radius: 5px; color: #fff; background: #173b6c; box-shadow: 0 8px 24px rgba(18,42,75,.2); font-size: .78rem; font-weight: 650; }
 .scroll-top { position: fixed; z-index: 30; right: 18px; bottom: 72px; width: 42px; height: 42px; border: 1px solid var(--border); border-radius: 50%; color: var(--primary); background: var(--surface); box-shadow: 0 5px 16px rgba(18,42,75,.12); cursor: pointer; font-size: 1rem; }
 .scroll-top .icon { width: 18px; height: 18px; }
@@ -444,7 +457,8 @@ body { font-size: 15px; background: var(--bg); }
   .cgpa-tool-card { padding: 16px 12px; }
   .subject-head { display: none; }
   .cgpa-tool-card .subject-row { grid-template-columns: 1fr 1fr; }
-  .cgpa-tool-card .subject-row .field:first-child { grid-column: 1 / -1; }
+  .cgpa-tool-card .subject-row .field:first-child { grid-column: 1 / -1; padding-right: 42px; }
+  .remove-subject-button { position: absolute; top: 9px; right: 10px; }
   .quick-tools { grid-template-columns: 1fr; }
   .button-row { grid-template-columns: 1fr; }
   .calculator-preferences { align-items: flex-start; flex-direction: column; }
