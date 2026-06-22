@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="CalcMate offers fast, free calculators for finance, students, health and everyday decisions in India and worldwide.">
+  <meta name="robots" content="index, follow">
+  <title>CalcMate - Fast Free Online Calculators</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json" id="faqSchema">{"@context":"https://schema.org","@type":"WebSite","name":"CalcMate","url":"./","description":"Fast, free calculators for money, study, health and everyday life."}</script>
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#home" aria-label="CalcMate home"><span aria-hidden="true">CM</span>CalcMate</a>
+      <div class="header-search">
+        <label class="sr-only" for="headerCalculatorSearch">Search all calculators</label>
+        <input id="headerCalculatorSearch" type="search" placeholder="Search calculators…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="headerSearchSuggestions" aria-expanded="false">
+        <div class="search-suggestions" id="headerSearchSuggestions" role="listbox" hidden></div>
+      </div>
+      <nav class="header-actions" aria-label="Primary navigation">
+        <a href="#all-calculators">Calculators</a>
+        <a href="#about">Guides</a>
+        <a href="#about">About</a>
+        <button class="install-button" id="installButton" type="button" hidden>Install app</button>
+        <button class="icon-button" id="themeToggle" type="button" aria-label="Switch to dark mode" title="Toggle dark mode">◐</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section id="homeView" class="home-view">
+      <div class="dashboard-layout">
+        <aside class="category-sidebar" aria-label="Calculator categories">
+          <div class="sidebar-title"><strong>Categories</strong><span>22+ professional tools</span></div>
+          <nav>
+            <a class="active" href="#india-section"><span>▣</span>India Finance</a>
+            <a href="#international-section"><span>◎</span>International</a>
+            <a href="#student-section"><span>◇</span>Student Tools</a>
+            <a href="#health-section"><span>⌁</span>Health</a>
+          </nav>
+        </aside>
+
+        <div class="dashboard-main">
+          <div class="hero">
+            <h1>Professional utility at your fingertips</h1>
+            <p>Quick, precise calculations for finance, health, and education. No clutter, just results.</p>
+            <div class="search-wrap">
+              <label class="sr-only" for="calculatorSearch">Search calculators</label>
+              <span aria-hidden="true">⌕</span>
+              <input id="calculatorSearch" type="search" placeholder="Search calculators…" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="searchSuggestions" aria-expanded="false">
+              <kbd>/</kbd>
+            </div>
+            <div class="search-suggestions" id="searchSuggestions" role="listbox" hidden></div>
+            <p id="searchStatus" class="search-status" aria-live="polite"></p>
+          </div>
+
+          <div class="directory" id="all-calculators">
+            <section class="personal-sections" aria-label="Your calculators">
+              <div class="personal-panel" id="favoritesPanel"><div class="personal-heading"><h2>Favorites</h2><span>Saved on this device</span></div><div class="personal-list" id="favoritesList"></div></div>
+              <div class="personal-panel" id="recentPanel"><div class="personal-heading"><h2>Recently Used</h2><span>Your latest tools</span></div><div class="personal-list" id="recentList"></div></div>
+            </section>
+            <section class="category-section popular-section" data-category="Popular">
+              <div class="section-heading"><div><h2>Popular Tools</h2></div><a href="#all-calculators">View all</a></div>
+              <div class="card-grid" id="popularGrid"></div>
+            </section>
+
+            <div class="ad-placeholder dashboard-ad"><span>Advertisement Placeholder [Leaderboard]</span><!-- AdSense Ad Placeholder --></div>
+
+            <section class="category-section compact-section" id="india-section" data-category="India Finance">
+              <div class="section-heading"><div><span class="section-icon india">▣</span><h2>India Finance</h2></div></div>
+              <div class="card-grid" id="indiaGrid"></div>
+            </section>
+            <section class="category-section compact-section" id="international-section" data-category="International">
+              <div class="section-heading"><div><span class="section-icon world">◎</span><h2>International / USA</h2></div></div>
+              <div class="card-grid" id="internationalGrid"></div>
+            </section>
+            <section class="category-section student-section" id="student-section" data-category="Student">
+              <div class="section-heading"><div><span class="section-icon student">◇</span><h2>Student Tools</h2></div></div>
+              <div class="student-layout"><div class="student-feature" data-search="cgpa calculator student"><button class="featured-favorite" type="button" data-favorite="cgpa-calculator" aria-label="Add CGPA Calculator to favorites" aria-pressed="false">♡</button><span>Featured</span><h3>CGPA Calculator</h3><p>Easily convert your grades to CGPA with precise credit weights.</p><div><a href="#cgpa-calculator">Start calculating</a><a href="#cgpa-calculator">Learn more</a></div><i aria-hidden="true">◇</i></div><div class="card-grid" id="studentGrid"></div></div>
+            </section>
+            <section class="category-section health-section" id="health-section" data-category="Health">
+              <div class="section-heading"><div><span class="section-icon health">⌁</span><h2>Health &amp; Wellness</h2></div></div>
+              <div class="card-grid" id="healthGrid"></div>
+            </section>
+            <div id="noResults" class="empty-state" hidden>
+              <h2>No calculator found</h2><p>Try a broader term such as “loan”, “grade” or “salary”.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <article id="calculatorView" class="calculator-view page-shell" hidden aria-live="polite"></article>
+
+    <section class="info-pages" aria-label="Company information">
+      <article id="about"><h2>About CalcMate</h2><p>CalcMate makes useful calculations easier to understand. Every tool is designed for speed, clarity and comfortable use on a phone. Results are estimates and should be checked with a qualified professional when a decision has financial, tax, academic or health consequences.</p></article>
+      <article id="privacy"><h2>Privacy Policy</h2><p>CalcMate performs calculations in your browser. We do not ask for an account or intentionally collect the values you enter. If analytics or advertising services are added later, this policy will be updated to explain their cookies and data practices.</p></article>
+      <article id="terms"><h2>Terms &amp; Conditions</h2><p>These calculators provide general estimates for informational purposes only. Formulas, regulations and institutional policies can differ. CalcMate makes no guarantee that a result is suitable for a particular financial, medical, tax or academic decision.</p></article>
+      <article id="contact"><h2>Contact</h2><p>Have a correction or calculator idea? Email <a href="mailto:hello@calcmate.example">hello@calcmate.example</a>.</p></article>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div><a class="brand footer-brand" href="#home"><span aria-hidden="true">CM</span>CalcMate</a><p>Small calculations. Better decisions.</p></div>
+    <nav aria-label="Footer navigation"><a href="#privacy">Privacy Policy</a><a href="#terms">Terms &amp; Conditions</a><a href="#contact">Contact</a><a href="#about">About Us</a></nav>
+    <p>© <span id="currentYear"></span> CalcMate. All rights reserved.</p>
+  </footer>
+</body>
+</html>
