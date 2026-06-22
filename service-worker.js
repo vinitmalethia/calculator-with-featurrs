@@ -1,4 +1,4 @@
-const CACHE_NAME = "calcmate-v1";
+const CACHE_NAME = "allcalc-v2";
 const APP_FILES = [
   "./",
   "./index.html",

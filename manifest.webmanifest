@@ -1,6 +1,6 @@
 {
-  "name": "CalcMate - Professional Calculators",
-  "short_name": "CalcMate",
+  "name": "AllCalc - Professional Calculators",
+  "short_name": "AllCalc",
   "description": "Fast calculators for finance, students, health and everyday decisions.",
   "start_url": "./index.html#home",
   "scope": "./",

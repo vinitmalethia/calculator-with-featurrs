@@ -33,7 +33,7 @@ const calculators = [
 const popularSlugs = ["emi-calculator","sip-calculator","percentage-calculator","bmi-calculator"];
 const grids = { "India Finance":"indiaGrid", International:"internationalGrid", Student:"studentGrid", Health:"healthGrid" };
 const state = { current: null, resultText: "", subjectCount: 5, currency: "" };
-const storageKeys = { favorites:"calcmate-favorites", recent:"calcmate-recent", history:"calcmate-history", currency:"calcmate-currency" };
+const storageKeys = { favorites:"allcalc-favorites", recent:"allcalc-recent", history:"allcalc-history", currency:"allcalc-currency" };
 const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
 const getFavorites = () => readLocal(storageKeys.favorites);
@@ -151,14 +151,14 @@ function saveHistory(calc, result) {
 
 function guideMarkup(calc) {
   const specific = calc.note || `${calc.name} turns the values you enter into a practical estimate using the formula shown below. It is useful for quick comparisons, planning and checking a manual calculation.`;
-  return `<section class="content-card"><h2>How to use this ${calc.name.toLowerCase()}</h2><p>${specific}</p><p>Enter your information in the labelled fields and select <strong>Calculate</strong>. CalcMate validates the inputs, applies the formula, and shows the main answer with a useful breakdown. Try different values to compare scenarios. Use Reset to restore the example values, Copy Result to place the answer on your clipboard, or Share Calculator to send a link without sharing the numbers you entered.</p><p>Start with values that reflect your current situation, then change one assumption at a time. This makes comparisons easier to understand. For example, you can test a different rate, time period, contribution, grade or target while keeping the other inputs unchanged. Record the assumptions alongside the result if you plan to discuss it with someone else. A result is most useful when everyone understands which numbers and rules produced it.</p><h3>Formula used</h3><p class="formula">${calc.formula}</p>${workedExampleMarkup(calc)}<p>The formula converts the inputs into one primary result, while the breakdown provides context that can help you interpret it. Units matter: percentages should be entered as ordinary percentages, money fields should use the displayed currency, and time fields should match the label. Avoid commas or currency symbols inside number inputs; the formatted result adds them automatically.</p><p>Results are rounded for readability, so a provider, institution or spreadsheet may differ slightly. Interest calculators assume a consistent rate and regular schedule. Academic policies and conversion rules vary by institution. Health tools provide broad screening estimates and cannot account for every personal factor. For important decisions, confirm the assumptions and use the official rules that apply to you.</p></section>`;
+  return `<section class="content-card"><h2>How to use this ${calc.name.toLowerCase()}</h2><p>${specific}</p><p>Enter your information in the labelled fields and select <strong>Calculate</strong>. AllCalc validates the inputs, applies the formula, and shows the main answer with a useful breakdown. Try different values to compare scenarios. Use Reset to restore the example values, Copy Result to place the answer on your clipboard, or Share Calculator to send a link without sharing the numbers you entered.</p><p>Start with values that reflect your current situation, then change one assumption at a time. This makes comparisons easier to understand. For example, you can test a different rate, time period, contribution, grade or target while keeping the other inputs unchanged. Record the assumptions alongside the result if you plan to discuss it with someone else. A result is most useful when everyone understands which numbers and rules produced it.</p><h3>Formula used</h3><p class="formula">${calc.formula}</p>${workedExampleMarkup(calc)}<p>The formula converts the inputs into one primary result, while the breakdown provides context that can help you interpret it. Units matter: percentages should be entered as ordinary percentages, money fields should use the displayed currency, and time fields should match the label. Avoid commas or currency symbols inside number inputs; the formatted result adds them automatically.</p><p>Results are rounded for readability, so a provider, institution or spreadsheet may differ slightly. Interest calculators assume a consistent rate and regular schedule. Academic policies and conversion rules vary by institution. Health tools provide broad screening estimates and cannot account for every personal factor. For important decisions, confirm the assumptions and use the official rules that apply to you.</p></section>`;
 }
 
 function faqFor(calc) {
   const faqs = [
     ["Is this calculator free to use?", `Yes. The ${calc.name} is free and runs entirely in your browser without an account.`],
     ["How accurate is the result?", `The arithmetic follows the displayed formula. Real-world results can differ when rates, fees, rounding rules or institutional policies use other assumptions.`],
-    ["Does CalcMate save my inputs?", "No. Input values are used for the calculation in your current browser page and are not intentionally stored or sent to a server."],
+    ["Does AllCalc save my inputs?", "No. Input values are used for the calculation in your current browser page and are not intentionally stored or sent to a server."],
     ["Can I use the result for an official decision?", "Treat it as an estimate. Check the result with the relevant lender, tax professional, university or healthcare professional when accuracy has important consequences."]
   ];
   return { faqs, markup: `<section class="content-card"><h2>Frequently asked questions</h2>${faqs.map(([q,a])=>`<details class="faq-item"><summary>${q}</summary><p>${a}</p></details>`).join("")}</section>` };
@@ -169,8 +169,8 @@ function renderCalculator(calc) {
   state.resultText = "";
   state.currency = "";
   recordRecent(calc.slug);
-  document.title = `${calc.name} - Free Online Tool | CalcMate`;
-  document.querySelector('meta[name="description"]').content = `${calc.desc} Use CalcMate's fast, free and mobile-friendly ${calc.name.toLowerCase()}.`;
+  document.title = `${calc.name} - Free Online Tool | AllCalc`;
+  document.querySelector('meta[name="description"]').content = `${calc.desc} Use AllCalc's fast, free and mobile-friendly ${calc.name.toLowerCase()}.`;
   const related = calculators.filter(c => c.category === calc.category && c.slug !== calc.slug).slice(0,4);
   const faq = faqFor(calc);
   document.getElementById("faqSchema").textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":faq.faqs.map(([q,a])=>({"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}}))});
@@ -255,14 +255,14 @@ async function copyResult() {
 }
 
 async function shareCalculator() {
-  const data={title:`${state.current.name} | CalcMate`,text:state.resultText||state.current.desc,url:location.href};
+  const data={title:`${state.current.name} | AllCalc`,text:state.resultText||state.current.desc,url:location.href};
   if(navigator.share){try{await navigator.share(data);}catch(err){if(err.name!=="AbortError")copyLink();}}else copyLink();
 }
 async function copyLink(){const b=document.getElementById("shareCalculator");try{await navigator.clipboard.writeText(location.href);b.textContent="Link copied!";}catch{b.textContent="Share unavailable";}setTimeout(()=>b.textContent="Share Calculator",1600);}
 
 function showHome(target) {
-  state.current=null; document.title="CalcMate - Fast Free Online Calculators";
-  document.querySelector('meta[name="description"]').content="CalcMate offers fast, free calculators for finance, students, health and everyday decisions in India and worldwide.";
+  state.current=null; document.title="AllCalc - Fast Free Online Calculators";
+  document.querySelector('meta[name="description"]').content="AllCalc offers fast, free calculators for finance, students, health and everyday decisions in India and worldwide.";
   document.getElementById("calculatorView").hidden=true;document.getElementById("homeView").hidden=false;document.querySelector(".info-pages").hidden=false;
   if(target && target!=="home")setTimeout(()=>document.getElementById(target)?.scrollIntoView(),0);else window.scrollTo({top:0,behavior:"instant"});
 }
@@ -293,11 +293,11 @@ function setupPersonalization() {
 }
 
 function setupTheme() {
-  const saved=localStorage.getItem("calcmate-theme");
+  const saved=localStorage.getItem("allcalc-theme");
   document.documentElement.dataset.theme=saved==="dark"?"dark":"light";
   const button=document.getElementById("themeToggle");
   const update=()=>button.setAttribute("aria-label",document.documentElement.dataset.theme==="dark"?"Switch to light mode":"Switch to dark mode");update();
-  button.addEventListener("click",()=>{const dark=document.documentElement.dataset.theme==="dark";document.documentElement.dataset.theme=dark?"light":"dark";localStorage.setItem("calcmate-theme",dark?"light":"dark");update();});
+  button.addEventListener("click",()=>{const dark=document.documentElement.dataset.theme==="dark";document.documentElement.dataset.theme=dark?"light":"dark";localStorage.setItem("allcalc-theme",dark?"light":"dark");update();});
 }
 
 function setupPWA() {
