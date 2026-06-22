@@ -1,4 +1,4 @@
-const CACHE_NAME = "allcalco-v4";
+const CACHE_NAME = "allcalco-v5";
 const APP_FILES = [
   "./",
   "./index.html",

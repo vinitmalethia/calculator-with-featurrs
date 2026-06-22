@@ -38,15 +38,16 @@ const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
 const getFavorites = () => readLocal(storageKeys.favorites);
 const isFavorite = slug => getFavorites().includes(slug);
+const iconSvg = (name, className = "") => `<svg class="icon ${className}" aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
 
 function cardMarkup(calc) {
-  const icon = calc.category === "India Finance" ? "₹" : calc.category === "International" ? "$" : calc.category === "Student" ? "›" : "+";
+  const icon = calc.category === "India Finance" ? "wallet" : calc.category === "International" ? "globe" : calc.category === "Student" ? "graduation" : "activity";
   const favorite = isFavorite(calc.slug);
-  return `<article class="calculator-card" data-search="${calc.name.toLowerCase()} ${calc.category.toLowerCase()}"><button class="favorite-button" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${favorite?"♥":"♡"}</button><span class="card-arrow" aria-hidden="true">${icon}</span><h3>${calc.name}</h3><p>${calc.desc}</p><span class="card-cta">${calc.category === "Health" ? "Open" : "Calculate →"}</span><a href="#${calc.slug}" aria-label="Open ${calc.name}"></a></article>`;
+  return `<article class="calculator-card" data-search="${calc.name.toLowerCase()} ${calc.category.toLowerCase()}"><button class="favorite-button ${favorite?"is-active":""}" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${iconSvg("heart")}</button><span class="card-arrow" aria-hidden="true">${iconSvg(icon)}</span><h3>${calc.name}</h3><p>${calc.desc}</p><span class="card-cta">${calc.category === "Health" ? "Open" : "Calculate"} ${iconSvg("arrow-right")}</span><a href="#${calc.slug}" aria-label="Open ${calc.name}"></a></article>`;
 }
 
 function personalItemMarkup(calc) {
-  return `<a class="personal-item" href="#${calc.slug}"><strong>${calc.name}</strong><span>${calc.category} →</span></a>`;
+  return `<a class="personal-item" href="#${calc.slug}"><strong>${calc.name}</strong><span>${calc.category} ${iconSvg("arrow-right")}</span></a>`;
 }
 
 function renderPersonalSections() {
@@ -61,13 +62,13 @@ function renderPersonalSections() {
 function toggleFavorite(slug) {
   const favorites=getFavorites(),next=favorites.includes(slug)?favorites.filter(item=>item!==slug):[...favorites,slug];
   writeLocal(storageKeys.favorites,next);
-  document.querySelectorAll(`[data-favorite="${slug}"]`).forEach(button=>{const active=next.includes(slug),calc=calculators.find(c=>c.slug===slug);button.textContent=active?"♥":"♡";button.setAttribute("aria-pressed",String(active));button.setAttribute("aria-label",`${active?"Remove":"Add"} ${calc.name} ${active?"from":"to"} favorites`);});
+  document.querySelectorAll(`[data-favorite="${slug}"]`).forEach(button=>{const active=next.includes(slug),calc=calculators.find(c=>c.slug===slug);button.innerHTML=iconSvg("heart");button.classList.toggle("is-active",active);button.setAttribute("aria-pressed",String(active));button.setAttribute("aria-label",`${active?"Remove":"Add"} ${calc.name} ${active?"from":"to"} favorites`);});
   renderPersonalSections();
   showToast(next.includes(slug)?"Added to favorites":"Removed from favorites");
 }
 
 function syncFavoriteButtons() {
-  document.querySelectorAll("[data-favorite]").forEach(button=>{const slug=button.dataset.favorite,active=isFavorite(slug),calc=calculators.find(c=>c.slug===slug);button.textContent=active?"♥":"♡";button.setAttribute("aria-pressed",String(active));button.setAttribute("aria-label",`${active?"Remove":"Add"} ${calc.name} ${active?"from":"to"} favorites`);});
+  document.querySelectorAll("[data-favorite]").forEach(button=>{const slug=button.dataset.favorite,active=isFavorite(slug),calc=calculators.find(c=>c.slug===slug);button.innerHTML=iconSvg("heart");button.classList.toggle("is-active",active);button.setAttribute("aria-pressed",String(active));button.setAttribute("aria-label",`${active?"Remove":"Add"} ${calc.name} ${active?"from":"to"} favorites`);});
 }
 
 function recordRecent(slug) {
@@ -136,12 +137,12 @@ function subjectRow(index) {
 }
 
 function detailSidebarMarkup(calc) {
-  const items = [["Student","◇","Student Tools","student-section"],["India Finance","▣","India Finance","india-section"],["International","◎","International","international-section"],["Health","⌁","Health","health-section"]];
-  return `<aside class="detail-sidebar" aria-label="Calculator categories"><div class="sidebar-title"><strong>Categories</strong><span>22+ Professional Tools</span></div><nav>${items.map(([category,icon,label,target])=>`<a class="${calc.category===category?"active":""}" href="#${target}"><span>${icon}</span>${label}</a>`).join("")}</nav></aside>`;
+  const items = [["Student","graduation","Student Tools","student-section"],["India Finance","wallet","India Finance","india-section"],["International","globe","International","international-section"],["Health","activity","Health","health-section"]];
+  return `<aside class="detail-sidebar" aria-label="Calculator categories"><div class="sidebar-title"><strong>Categories</strong><span>22+ Professional Tools</span></div><nav>${items.map(([category,icon,label,target])=>`<a class="${calc.category===category?"active":""}" href="#${target}"><span>${iconSvg(icon)}</span>${label}</a>`).join("")}</nav></aside>`;
 }
 
 function quickCgpaMarkup() {
-  return `<section class="quick-tools" aria-label="Quick CGPA conversions"><div class="quick-card"><h2>↯ &nbsp; CGPA to Percentage</h2><div class="input-shell"><input id="quickCgpa" type="number" min="0" max="10" step="0.01" placeholder="Enter CGPA (e.g. 8.5)"></div><button class="button quick-button" id="quickPercentageButton" type="button">Convert (× 9.5)</button><p id="quickPercentageResult" aria-live="polite"></p></div><div class="quick-card"><h2>↯ &nbsp; SGPA to CGPA</h2><div class="input-shell"><input id="quickSgpa" type="text" placeholder="Enter SGPAs (e.g. 8, 9, 7.5)"></div><button class="button quick-button" id="quickSgpaButton" type="button">Average SGPA</button><p id="quickSgpaResult" aria-live="polite"></p></div></section>`;
+  return `<section class="quick-tools" aria-label="Quick CGPA conversions"><div class="quick-card"><h2>${iconSvg("sparkles")} CGPA to Percentage</h2><div class="input-shell"><input id="quickCgpa" type="number" min="0" max="10" step="0.01" placeholder="Enter CGPA (e.g. 8.5)"></div><button class="button quick-button" id="quickPercentageButton" type="button">Convert (× 9.5)</button><p id="quickPercentageResult" aria-live="polite"></p></div><div class="quick-card"><h2>${iconSvg("sparkles")} SGPA to CGPA</h2><div class="input-shell"><input id="quickSgpa" type="text" placeholder="Enter SGPAs (e.g. 8, 9, 7.5)"></div><button class="button quick-button" id="quickSgpaButton" type="button">Average SGPA</button><p id="quickSgpaResult" aria-live="polite"></p></div></section>`;
 }
 
 function historyMarkup(calc) {
@@ -192,16 +193,16 @@ function renderCalculator(calc) {
   const view = document.getElementById("calculatorView");
   const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><p class="result-value" id="resultValue"></p><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="copyResult">Copy result</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
   const relatedMarkup = `<section class="content-card"><h2>Related calculators</h2><div class="related-links">${related.map(c=>`<a href="#${c.slug}">${c.name}</a>`).join("")}</div></section>${historyMarkup(calc)}`;
-  const ad = `<div class="ad-placeholder detail-ad"><span>Advertisement Placeholder</span><!-- AdSense Ad Placeholder --></div>`;
+  const ad = `<div class="ad-placeholder detail-ad" data-ad-slot="calculator-detail"><!-- Ad network content is injected only when active. --></div>`;
   let body;
   if (calc.custom === "cgpa") {
     body = `${ad}<section class="tool-card cgpa-tool-card"><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}<div class="cgpa-form-content">${cgpaMarkup()}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate CGPA</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}</section>${ad}${quickCgpaMarkup()}<div class="content-column detail-content">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div>`;
   } else {
-    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}${currencyControlMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder"><span>Advertisement</span><!-- AdSense Ad Placeholder --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
+    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}${currencyControlMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder" data-ad-slot="calculator-inline"><!-- Ad network content is injected only when active. --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
   }
-  const eyebrow = calc.category === "Student" ? "✣ &nbsp; Academic excellence" : `✣ &nbsp; ${calc.category}`;
+  const eyebrow = `${iconSvg("sparkles")} ${calc.category === "Student" ? "Academic excellence" : calc.category}`;
   const favorite=isFavorite(calc.slug);
-  view.innerHTML = `<div class="detail-shell">${detailSidebarMarkup(calc)}<div class="detail-main"><a class="detail-back" href="#home">← All calculators</a><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#home">Home</a><span>/</span><span>${calc.name}</span></nav><header class="calculator-header"><button class="detail-favorite" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${favorite?"♥":"♡"}</button><span class="card-tag">${eyebrow}</span><h1>Professional ${calc.name}</h1><p>${calc.desc} Designed for clarity, accuracy, and easy comparison.</p></header>${body}</div></div>`;
+  view.innerHTML = `<div class="detail-shell">${detailSidebarMarkup(calc)}<div class="detail-main"><a class="detail-back" href="#home">${iconSvg("arrow-left")} All calculators</a><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#home">Home</a><span>/</span><span>${calc.name}</span></nav><header class="calculator-header"><button class="detail-favorite ${favorite?"is-active":""}" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${iconSvg("heart")}</button><span class="card-tag">${eyebrow}</span><h1>Professional ${calc.name}</h1><p>${calc.desc} Designed for clarity, accuracy, and easy comparison.</p></header>${body}</div></div>`;
   document.getElementById("homeView").hidden = true;
   document.querySelector(".info-pages").hidden = true;
   view.hidden = false;
@@ -346,8 +347,15 @@ function setupTheme() {
   const saved=localStorage.getItem("allcalco-theme");
   document.documentElement.dataset.theme=saved==="dark"?"dark":"light";
   const button=document.getElementById("themeToggle");
-  const update=()=>button.setAttribute("aria-label",document.documentElement.dataset.theme==="dark"?"Switch to light mode":"Switch to dark mode");update();
+  const update=()=>{const dark=document.documentElement.dataset.theme==="dark";button.setAttribute("aria-label",dark?"Switch to light mode":"Switch to dark mode");button.innerHTML=iconSvg(dark?"sun":"moon");};update();
   button.addEventListener("click",()=>{const dark=document.documentElement.dataset.theme==="dark";document.documentElement.dataset.theme=dark?"light":"dark";localStorage.setItem("allcalco-theme",dark?"light":"dark");update();});
+}
+
+function setupAds() {
+  window.AllCalcoAds={
+    activate(slot){const ads=[...document.querySelectorAll(`[data-ad-slot="${slot}"]`)];ads.forEach(ad=>ad.dataset.adActive="true");return ads;},
+    deactivate(slot){document.querySelectorAll(`[data-ad-slot="${slot}"]`).forEach(ad=>{ad.removeAttribute("data-ad-active");ad.replaceChildren();});}
+  };
 }
 
 function setupPWA() {
@@ -359,4 +367,4 @@ function setupPWA() {
   if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 }
 
-renderDirectory();setupSearch();setupHeaderSearch();setupTheme();setupPersonalization();setupConvenienceControls();setupPWA();document.getElementById("currentYear").textContent=new Date().getFullYear();window.addEventListener("hashchange",route);route();
+renderDirectory();setupSearch();setupHeaderSearch();setupTheme();setupAds();setupPersonalization();setupConvenienceControls();setupPWA();document.getElementById("currentYear").textContent=new Date().getFullYear();window.addEventListener("hashchange",route);route();
