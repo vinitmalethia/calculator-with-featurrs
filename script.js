@@ -6,14 +6,14 @@ const number = (value, digits = 2) => new Intl.NumberFormat("en-IN", { maximumFr
 const field = (id, label, options = {}) => ({ id, label, type: "number", min: 0, step: "any", ...options });
 
 const calculators = [
-  { slug: "emi-calculator", name: "EMI Calculator", category: "India Finance", desc: "Estimate monthly loan EMI, total interest and repayment.", formula: "EMI = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("principal", "Loan amount", { prefix: "₹", value: 500000 }), field("rate", "Annual interest rate", { suffix: "%", value: 9 }), field("years", "Loan tenure", { suffix: "years", value: 5 })], calc: v => { const n=v.years*12,r=v.rate/1200,p=v.principal,emi=r ? p*r*(1+r)**n/((1+r)**n-1) : p/n; return { value: moneyINR(emi)+" / month", detail: `Total payment: ${moneyINR(emi*n)} · Total interest: ${moneyINR(emi*n-p)}` }; } },
+  { slug: "emi-calculator", name: "EMI Calculator", category: "India Finance", desc: "Estimate monthly loan EMI, total interest and repayment.", formula: "EMI = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("principal", "Loan amount", { prefix: "₹", value: 500000 }), field("rate", "Annual interest rate", { suffix: "%", value: 9 }), field("years", "Loan tenure", { suffix: "years", value: 5 })], calc: v => { const n=v.years*12,r=v.rate/1200,p=v.principal,emi=r ? p*r*(1+r)**n/((1+r)**n-1) : p/n,interest=emi*n-p; return { value: moneyINR(emi)+" / month", detail: `Total payment: ${moneyINR(emi*n)} · Total interest: ${moneyINR(interest)}`, chart:{title:"Payment breakdown",items:[{label:"Principal",value:p,color:"#0752c7"},{label:"Total interest",value:interest,color:"#f59e0b"}]} }; } },
   { slug: "sip-calculator", name: "SIP Calculator", category: "India Finance", desc: "Project the future value of monthly mutual fund investments.", formula: "Future value = P × [((1 + r)ⁿ − 1) ÷ r] × (1 + r)", fields: [field("monthly", "Monthly investment", { prefix: "₹", value: 5000 }), field("rate", "Expected annual return", { suffix: "%", value: 12 }), field("years", "Investment period", { suffix: "years", value: 10 })], calc: v => { const r=v.rate/1200,n=v.years*12,total=v.monthly*n,fv=r ? v.monthly*((1+r)**n-1)/r*(1+r) : total; return { value: moneyINR(fv), detail: `Invested: ${moneyINR(total)} · Estimated gain: ${moneyINR(fv-total)}` }; } },
   { slug: "fd-calculator", name: "FD Calculator", category: "India Finance", desc: "Calculate fixed deposit maturity value and interest earned.", formula: "Maturity = Principal × (1 + rate ÷ 4)⁽⁴ × years⁾", fields: [field("principal", "Deposit amount", { prefix: "₹", value: 100000 }), field("rate", "Annual interest rate", { suffix: "%", value: 7 }), field("years", "Deposit term", { suffix: "years", value: 5 })], calc: v => { const m=v.principal*(1+v.rate/400)**(4*v.years); return { value: moneyINR(m), detail: `Interest earned: ${moneyINR(m-v.principal)} (quarterly compounding)` }; } },
   { slug: "rd-calculator", name: "RD Calculator", category: "India Finance", desc: "Estimate recurring deposit maturity from monthly savings.", formula: "Maturity = P × [((1 + r)ⁿ − 1) ÷ r] × (1 + r)", fields: [field("monthly", "Monthly deposit", { prefix: "₹", value: 3000 }), field("rate", "Annual interest rate", { suffix: "%", value: 7 }), field("years", "Deposit term", { suffix: "years", value: 3 })], calc: v => { const r=v.rate/1200,n=v.years*12,paid=v.monthly*n,m=r?v.monthly*((1+r)**n-1)/r*(1+r):paid; return { value: moneyINR(m), detail: `Total deposits: ${moneyINR(paid)} · Interest: ${moneyINR(m-paid)}` }; } },
-  { slug: "gst-calculator", name: "GST Calculator", category: "India Finance", desc: "Add GST to a base price or remove it from an inclusive price.", formula: "GST = Amount × rate ÷ 100 (exclusive) or Amount × rate ÷ (100 + rate) (inclusive)", fields: [field("amount", "Amount", { prefix: "₹", value: 1000 }), field("rate", "GST rate", { suffix: "%", value: 18 }), { id: "mode", label: "Amount type", type: "select", options: [["exclusive","Before GST"],["inclusive","Including GST"]] }], calc: v => { const gst=v.mode==="inclusive"?v.amount*v.rate/(100+v.rate):v.amount*v.rate/100,total=v.mode==="inclusive"?v.amount:v.amount+gst,base=total-gst; return { value: moneyINR(total), detail: `Base: ${moneyINR(base)} · GST: ${moneyINR(gst)}` }; } },
-  { slug: "income-tax-calculator-india", name: "Income Tax Calculator India", category: "India Finance", desc: "Get an indicative new-regime income tax estimate for FY 2025–26.", formula: "Tax is calculated progressively across applicable income slabs, plus 4% cess.", note: "This simplified estimate uses FY 2025–26 new-regime slabs and a ₹75,000 salaried standard deduction. It excludes surcharge and special-rate income. Verify current rules before filing.", fields: [field("income", "Annual salary income", { prefix: "₹", value: 1200000 }), field("other", "Other taxable income", { prefix: "₹", value: 0 })], calc: v => { const taxable=Math.max(0,v.income-75000+v.other); if(taxable<=1200000)return {value:moneyINR(0),detail:`Taxable income: ${moneyINR(taxable)} · Rebate applied (indicative)`}; const slabs=[[400000,0],[800000,.05],[1200000,.10],[1600000,.15],[2000000,.20],[2400000,.25],[Infinity,.30]]; let tax=0,low=0; for(const [high,rate] of slabs){tax+=Math.max(0,Math.min(taxable,high)-low)*rate;if(taxable<=high)break;low=high;} return {value:moneyINR(tax*1.04),detail:`Tax before 4% cess: ${moneyINR(tax)} · Taxable income: ${moneyINR(taxable)}`}; } },
-  { slug: "mortgage-calculator", name: "Mortgage Calculator", category: "International", desc: "Estimate a monthly home loan payment and total interest.", formula: "Payment = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("price", "Home price", { prefix: "$", value: 400000 }), field("down", "Down payment", { prefix: "$", value: 80000 }), field("rate", "Annual interest rate", { suffix: "%", value: 6.5 }), field("years", "Loan term", { suffix: "years", value: 30 })], calc: v => { const p=v.price-v.down,n=v.years*12,r=v.rate/1200,m=r?p*r*(1+r)**n/((1+r)**n-1):p/n; return {value:moneyUSD(m)+" / month",detail:`Loan: ${moneyUSD(p)} · Total interest: ${moneyUSD(m*n-p)} (taxes and insurance excluded)`}; } },
-  { slug: "loan-calculator", name: "Loan Calculator", category: "International", desc: "Calculate monthly payments for a standard amortizing loan.", formula: "Payment = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("principal", "Loan amount", { prefix: "$", value: 20000 }), field("rate", "Annual interest rate", { suffix: "%", value: 8 }), field("years", "Loan term", { suffix: "years", value: 4 })], calc: v => { const n=v.years*12,r=v.rate/1200,m=r?v.principal*r*(1+r)**n/((1+r)**n-1):v.principal/n; return {value:moneyUSD(m)+" / month",detail:`Total payment: ${moneyUSD(m*n)} · Interest: ${moneyUSD(m*n-v.principal)}`}; } },
+  { slug: "gst-calculator", name: "GST Calculator", category: "India Finance", desc: "Add GST to a base price or remove it from an inclusive price.", formula: "GST = Amount × rate ÷ 100 (exclusive) or Amount × rate ÷ (100 + rate) (inclusive)", fields: [field("amount", "Amount", { prefix: "₹", value: 1000 }), field("rate", "GST rate", { suffix: "%", value: 18 }), { id: "mode", label: "Amount type", type: "select", options: [["exclusive","Before GST"],["inclusive","Including GST"]] }], calc: v => { const gst=v.mode==="inclusive"?v.amount*v.rate/(100+v.rate):v.amount*v.rate/100,total=v.mode==="inclusive"?v.amount:v.amount+gst,base=total-gst; return { value: moneyINR(total), detail: `Base: ${moneyINR(base)} · GST: ${moneyINR(gst)}`,chart:{title:"Price breakdown",items:[{label:"Base price",value:base,color:"#0752c7"},{label:"GST",value:gst,color:"#e87924"}]} }; } },
+  { slug: "income-tax-calculator-india", name: "Income Tax Calculator India", category: "India Finance", desc: "Compare indicative old- and new-regime income tax for FY 2025–26.", formula: "Tax is calculated progressively across the selected regime slabs, then 4% cess is added.", note: "This simplified AY 2026–27 comparison is for individuals under 60. It uses a ₹75,000 new-regime or ₹50,000 old-regime salaried standard deduction, accepts a combined old-regime deduction amount, and excludes surcharge, marginal relief and special-rate income. Verify the official rules before filing using the <a href='https://www.incometax.gov.in/iec/foportal/help/individual/return-applicable-1' target='_blank' rel='noopener'>Income Tax Department slabs</a>.", fields: [{id:"regime",label:"Tax regime",type:"select",options:[["new","New regime"],["old","Old regime"]]}, field("income", "Annual salary income", { prefix: "₹", value: 1200000 }), field("other", "Other taxable income", { prefix: "₹", value: 0 }), field("deductions", "Old-regime deductions", { prefix: "₹", value: 0 })], calc: v => { const old=v.regime==="old",taxable=Math.max(0,v.income+v.other-(old?50000:75000)-(old?v.deductions:0)),slabs=old?[[250000,0],[500000,.05],[1000000,.20],[Infinity,.30]]:[[400000,0],[800000,.05],[1200000,.10],[1600000,.15],[2000000,.20],[2400000,.25],[Infinity,.30]]; let tax=0,low=0;for(const [high,rate] of slabs){tax+=Math.max(0,Math.min(taxable,high)-low)*rate;if(taxable<=high)break;low=high;}if((old&&taxable<=500000)||(!old&&taxable<=1200000))tax=0;const totalTax=tax*1.04;return {value:moneyINR(totalTax),detail:`${old?"Old":"New"} regime · Taxable income: ${moneyINR(taxable)} · Includes 4% cess`,chart:{title:"Income and tax",items:[{label:"Income after tax",value:Math.max(0,taxable-totalTax),color:"#0752c7"},{label:"Estimated tax",value:totalTax,color:"#dc4c4c"}]}}; } },
+  { slug: "mortgage-calculator", name: "Mortgage Calculator", category: "International", desc: "Estimate a monthly home loan payment and total interest.", formula: "Payment = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("price", "Home price", { prefix: "$", value: 400000 }), field("down", "Down payment", { prefix: "$", value: 80000 }), field("rate", "Annual interest rate", { suffix: "%", value: 6.5 }), field("years", "Loan term", { suffix: "years", value: 30 })], calc: v => { const p=v.price-v.down,n=v.years*12,r=v.rate/1200,m=r?p*r*(1+r)**n/((1+r)**n-1):p/n,interest=m*n-p; return {value:moneyUSD(m)+" / month",detail:`Loan: ${moneyUSD(p)} · Total interest: ${moneyUSD(interest)} (taxes and insurance excluded)`,chart:{title:"Payment breakdown",items:[{label:"Loan principal",value:p,color:"#0752c7"},{label:"Total interest",value:interest,color:"#f59e0b"}]}}; } },
+  { slug: "loan-calculator", name: "Loan Calculator", category: "International", desc: "Calculate monthly payments for a standard amortizing loan.", formula: "Payment = P × r × (1 + r)ⁿ ÷ ((1 + r)ⁿ − 1)", fields: [field("principal", "Loan amount", { prefix: "$", value: 20000 }), field("rate", "Annual interest rate", { suffix: "%", value: 8 }), field("years", "Loan term", { suffix: "years", value: 4 })], calc: v => { const n=v.years*12,r=v.rate/1200,m=r?v.principal*r*(1+r)**n/((1+r)**n-1):v.principal/n,interest=m*n-v.principal; return {value:moneyUSD(m)+" / month",detail:`Total payment: ${moneyUSD(m*n)} · Interest: ${moneyUSD(interest)}`,chart:{title:"Payment breakdown",items:[{label:"Principal",value:v.principal,color:"#0752c7"},{label:"Total interest",value:interest,color:"#f59e0b"}]}}; } },
   { slug: "compound-interest-calculator", name: "Compound Interest Calculator", category: "International", desc: "See how money grows when interest compounds over time.", formula: "A = P × (1 + r ÷ n)⁽ⁿᵗ⁾", fields: [field("principal", "Starting amount", { prefix: "$", value: 10000 }), field("rate", "Annual interest rate", { suffix: "%", value: 7 }), field("years", "Time", { suffix: "years", value: 10 }), { id:"frequency",label:"Compounds per year",type:"select",options:[[1,"Annually"],[4,"Quarterly"],[12,"Monthly"],[365,"Daily"]] }], calc:v=>{const a=v.principal*(1+v.rate/100/v.frequency)**(v.frequency*v.years);return{value:moneyUSD(a),detail:`Interest earned: ${moneyUSD(a-v.principal)}`};} },
   { slug: "hourly-to-salary-calculator", name: "Hourly to Salary Calculator", category: "International", desc: "Convert an hourly wage into weekly, monthly and annual pay.", formula: "Annual salary = hourly rate × hours per week × working weeks", fields: [field("hourly", "Hourly rate", { prefix: "$", value: 25 }), field("hours", "Hours per week", { value: 40 }), field("weeks", "Working weeks", { value: 52, max: 52 })], calc:v=>{const annual=v.hourly*v.hours*v.weeks;return{value:moneyUSD(annual)+" / year",detail:`Monthly: ${moneyUSD(annual/12)} · Weekly: ${moneyUSD(annual/v.weeks)}`};} },
   { slug: "salary-to-hourly-calculator", name: "Salary to Hourly Calculator", category: "International", desc: "Convert an annual salary into an equivalent hourly wage.", formula: "Hourly rate = annual salary ÷ (hours per week × working weeks)", fields: [field("salary", "Annual salary", { prefix: "$", value: 60000 }), field("hours", "Hours per week", { value: 40 }), field("weeks", "Working weeks", { value: 52, max: 52 })], calc:v=>{const hourly=v.salary/(v.hours*v.weeks);return{value:moneyUSD(hourly)+" / hour",detail:`Monthly: ${moneyUSD(v.salary/12)} · Weekly: ${moneyUSD(v.salary/v.weeks)}`};} },
@@ -32,7 +32,7 @@ const calculators = [
 
 const popularSlugs = ["emi-calculator","sip-calculator","percentage-calculator","bmi-calculator"];
 const grids = { "India Finance":"indiaGrid", International:"internationalGrid", Student:"studentGrid", Health:"healthGrid" };
-const state = { current: null, resultText: "", resultValue: "", subjectCount: 5, currency: "" };
+const state = { current: null, resultText: "", resultValue: "", chart: null, subjectCount: 5, currency: "" };
 const storageKeys = { favorites:"allcalco-favorites", recent:"allcalco-recent", history:"allcalco-history", currency:"allcalco-currency", autoCalculate:"allcalco-auto-calculate" };
 const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
@@ -108,12 +108,27 @@ function sliderConfig(f) {
   return {min,max,step,value:Math.min(max,Math.max(min,value))};
 }
 
+const presetConfigs={
+  "fd-calculator":{label:"Quick tenure",field:"years",options:[[1,"1 year"],[3,"3 years"],[5,"5 years"]]},
+  "rd-calculator":{label:"Quick tenure",field:"years",options:[[1,"1 year"],[3,"3 years"],[5,"5 years"]]},
+  "sip-calculator":{label:"Investment period",field:"years",options:[[5,"5 years"],[10,"10 years"],[15,"15 years"]]},
+  "compound-interest-calculator":{label:"Growth period",field:"years",options:[[5,"5 years"],[10,"10 years"],[20,"20 years"]]},
+  "income-tax-calculator-india":{label:"Tax regime",field:"regime",options:[["new","New regime"],["old","Old regime"]]}
+};
+
+function presetMarkup(calc) {
+  const preset=presetConfigs[calc.slug];
+  if(!preset)return "";
+  const current=calc.fields.find(field=>field.id===preset.field),defaultValue=current?.type==="select"?current.options[0][0]:current?.value;
+  return `<section class="quick-presets" aria-label="${preset.label}"><span>${preset.label}</span><div>${preset.options.map(([value,label])=>`<button class="preset-button ${String(value)===String(defaultValue)?"active":""}" type="button" data-preset-field="${preset.field}" data-preset-value="${value}">${label}</button>`).join("")}</div></section>`;
+}
+
 function fieldMarkup(f) {
   if (f.type === "select") return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell"><select id="${f.id}" name="${f.id}">${f.options.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></div></div>`;
   const affix = f.suffix ? `<span class="input-affix">${f.suffix}</span>` : "";
   const prefix = f.prefix ? `<span class="input-affix money-affix" style="border-left:0;border-right:1px solid var(--border)">${f.prefix}</span>` : "";
   const slider=sliderConfig(f);
-  return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell">${prefix}<input id="${f.id}" name="${f.id}" type="${f.type}" value="${f.value ?? ""}" ${f.type === "number" ? `min="${f.min ?? 0}" ${f.max ? `max="${f.max}"` : ""} step="${f.step ?? "any"}" inputmode="decimal"` : ""} required>${affix}</div>${slider?`<input class="smart-slider" type="range" data-range-for="${f.id}" min="${slider.min}" max="${slider.max}" step="${slider.step}" value="${slider.value}" aria-label="Adjust ${f.label}">`:""}</div>`;
+  return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell">${prefix}<input id="${f.id}" name="${f.id}" type="${f.type}" value="${f.value ?? ""}" ${f.type === "number" ? `min="${f.min ?? 0}" ${f.max ? `max="${f.max}"` : ""} step="${f.step ?? "any"}" inputmode="decimal"` : ""} required>${affix}</div>${slider?`<input class="smart-slider" type="range" data-range-for="${f.id}" min="${slider.min}" max="${slider.max}" step="${slider.step}" value="${slider.value}" aria-label="Adjust ${f.label}">`:""}${f.prefix?`<small class="input-formatted" data-format-for="${f.id}" aria-live="polite"></small>`:""}</div>`;
 }
 
 function currencyControlMarkup(calc) {
@@ -126,7 +141,23 @@ function currencyControlMarkup(calc) {
 function applyCurrencyDisplay(result) {
   if(!state.currency)return result;
   const symbols={INR:"₹",USD:"$",GBP:"£",EUR:"€"},symbol=symbols[state.currency];
-  return {value:result.value.replace(/[₹$£€]/g,symbol),detail:result.detail.replace(/[₹$£€]/g,symbol)};
+  return {...result,value:result.value.replace(/[₹$£€]/g,symbol),detail:result.detail.replace(/[₹$£€]/g,symbol)};
+}
+
+function formatChartValue(value) {
+  const currency=state.currency||(state.current?.category==="India Finance"?"INR":"USD"),locale=currency==="INR"?"en-IN":"en-US";
+  return new Intl.NumberFormat(locale,{style:"currency",currency,maximumFractionDigits:0}).format(value);
+}
+
+function renderBreakdownChart(chart) {
+  const target=document.getElementById("resultBreakdown");
+  if(!target)return;
+  const items=(chart?.items||[]).filter(item=>Number.isFinite(item.value)&&item.value>0),total=items.reduce((sum,item)=>sum+item.value,0);
+  if(!chart||!total||items.length<2){target.hidden=true;target.replaceChildren();return;}
+  let offset=0;
+  const segments=items.map(item=>{const percent=item.value/total*100,current=offset;offset+=percent;return `<circle cx="50" cy="50" r="40" pathLength="100" fill="none" stroke="${item.color}" stroke-width="16" stroke-dasharray="${percent} ${100-percent}" stroke-dashoffset="-${current}"/>`;}).join("");
+  target.innerHTML=`<h3>${chart.title}</h3><div class="breakdown-content"><svg class="donut-chart" viewBox="0 0 100 100" role="img" aria-label="${chart.title}"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" stroke-width="16"/>${segments}</svg><div class="chart-legend">${items.map(item=>`<div><span style="--legend-color:${item.color}"></span><p><strong>${item.label}</strong><small>${formatChartValue(item.value)}</small></p></div>`).join("")}</div></div>`;
+  target.hidden=false;
 }
 
 function calculatorPreferencesMarkup() {
@@ -205,6 +236,7 @@ function renderCalculator(calc) {
   state.current = calc;
   state.resultText = "";
   state.resultValue = "";
+  state.chart = null;
   state.currency = "";
   recordRecent(calc.slug);
   document.title = `${calc.name} - Free Online Tool | AllCalco`;
@@ -213,14 +245,14 @@ function renderCalculator(calc) {
   const faq = faqFor(calc);
   document.getElementById("faqSchema").textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":faq.faqs.map(([q,a])=>({"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}}))});
   const view = document.getElementById("calculatorView");
-  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><div class="result-value-row"><p class="result-value" id="resultValue"></p><button class="result-copy" type="button" id="copyResult" aria-label="Copy result" title="Copy result">${iconSvg("clipboard")}</button></div><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
+  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><div class="result-value-row"><p class="result-value" id="resultValue"></p><button class="result-copy" type="button" id="copyResult" aria-label="Copy result" title="Copy result">${iconSvg("clipboard")}</button></div><p class="result-detail" id="resultDetail"></p><section class="result-breakdown" id="resultBreakdown" hidden></section><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
   const relatedMarkup = `<section class="content-card"><h2>Related calculators</h2><div class="related-links">${related.map(c=>`<a href="#${c.slug}">${c.name}</a>`).join("")}</div></section>${historyMarkup(calc)}`;
   const ad = `<div class="ad-placeholder detail-ad" data-ad-slot="calculator-detail"><!-- Ad network content is injected only when active. --></div>`;
   let body;
   if (calc.custom === "cgpa") {
     body = `${ad}<section class="tool-card cgpa-tool-card"><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}<div class="cgpa-form-content">${cgpaMarkup()}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate CGPA</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}</section>${ad}${quickCgpaMarkup()}<div class="content-column detail-content">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div>`;
   } else {
-    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}${currencyControlMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder" data-ad-slot="calculator-inline"><!-- Ad network content is injected only when active. --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
+    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}${currencyControlMarkup(calc)}${presetMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder" data-ad-slot="calculator-inline"><!-- Ad network content is injected only when active. --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
   }
   const eyebrow = `${iconSvg("sparkles")} ${calc.category === "Student" ? "Academic excellence" : calc.category}`;
   const favorite=isFavorite(calc.slug);
@@ -247,6 +279,20 @@ function syncAllSliders(form) {
   form.querySelectorAll(".smart-slider[data-range-for]").forEach(slider=>{const input=document.getElementById(slider.dataset.rangeFor);if(input&&input.value!=="")slider.value=input.value;});
 }
 
+function updateFormattedValues(form) {
+  form.querySelectorAll(".input-formatted[data-format-for]").forEach(output=>{const input=document.getElementById(output.dataset.formatFor),field=input?.closest(".field"),symbol=field?.querySelector(".money-affix")?.textContent.trim()||"";if(!input||input.value===""||!Number.isFinite(Number(input.value))){output.textContent="";return;}const locale=symbol==="₹"?"en-IN":"en-US";output.textContent=`${symbol} ${new Intl.NumberFormat(locale,{maximumFractionDigits:2}).format(Number(input.value))}`;});
+}
+
+function syncPresetButtons(form) {
+  form.querySelectorAll(".preset-button").forEach(button=>{const field=document.getElementById(button.dataset.presetField);button.classList.toggle("active",field&&String(field.value)===button.dataset.presetValue);});
+}
+
+function updateTaxRegimeFields(calc) {
+  if(calc.slug!=="income-tax-calculator-india")return;
+  const deductions=document.getElementById("deductions"),field=deductions?.closest(".field"),old=document.getElementById("regime")?.value==="old";
+  if(deductions){deductions.disabled=!old;field?.classList.toggle("is-disabled",!old);}
+}
+
 function fillExample(calc, form) {
   form.reset();
   setTimeout(()=>{
@@ -258,6 +304,7 @@ function fillExample(calc, form) {
       document.querySelectorAll(".subject-credit").forEach(input=>input.value=4);
     }
     syncAllSliders(form);
+    updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc);
     form.requestSubmit();
     showToast("Example values loaded");
   },20);
@@ -272,14 +319,16 @@ function wireCalculator(calc) {
     document.getElementById("quickSgpaButton").addEventListener("click", () => { const values=document.getElementById("quickSgpa").value.split(",").map(v=>Number(v.trim())).filter(Number.isFinite),out=document.getElementById("quickSgpaResult"); out.textContent=values.length?`Average: ${number(values.reduce((a,b)=>a+b,0)/values.length,3)}`:"Enter SGPAs separated by commas."; });
   }
   const currencySelect=document.getElementById("currencySelect");
-  if(currencySelect){const updateCurrency=()=>{state.currency=currencySelect.value;writeLocal(storageKeys.currency,state.currency);const symbol={INR:"₹",USD:"$",GBP:"£",EUR:"€"}[state.currency];document.querySelectorAll(".money-affix").forEach(item=>item.textContent=symbol);["resultValue","resultDetail"].forEach(id=>{const item=document.getElementById(id);if(item)item.textContent=item.textContent.replace(/[₹$£€]/g,symbol);});state.resultText=state.resultText.replace(/[₹$£€]/g,symbol);};updateCurrency();currencySelect.addEventListener("change",updateCurrency);}
+  if(currencySelect){const updateCurrency=()=>{state.currency=currencySelect.value;writeLocal(storageKeys.currency,state.currency);const symbol={INR:"₹",USD:"$",GBP:"£",EUR:"€"}[state.currency];document.querySelectorAll(".money-affix").forEach(item=>item.textContent=symbol);["resultValue","resultDetail"].forEach(id=>{const item=document.getElementById(id);if(item)item.textContent=item.textContent.replace(/[₹$£€]/g,symbol);});state.resultText=state.resultText.replace(/[₹$£€]/g,symbol);updateFormattedValues(form);if(state.chart)renderBreakdownChart(state.chart);};updateCurrency();currencySelect.addEventListener("change",updateCurrency);}
+  updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc);
   form.addEventListener("submit", e => { e.preventDefault(); calculate(calc,true); });
-  form.addEventListener("reset", () => setTimeout(() => { document.getElementById("resultBox").hidden = true; document.getElementById("formError").textContent = ""; if(calc.custom === "cgpa")renderSubjectRows(5); },0));
+  form.addEventListener("reset", () => setTimeout(() => { document.getElementById("resultBox").hidden = true; document.getElementById("formError").textContent = ""; if(calc.custom === "cgpa")renderSubjectRows(5);updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc); },0));
+  form.addEventListener("click",e=>{const button=e.target.closest(".preset-button");if(!button)return;const field=document.getElementById(button.dataset.presetField);if(!field)return;field.value=button.dataset.presetValue;field.dispatchEvent(new Event("input",{bubbles:true}));field.dispatchEvent(new Event("change",{bubbles:true}));syncPresetButtons(form);});
   document.getElementById("loadExample").addEventListener("click",()=>fillExample(calc,form));
   const autoCalculate=document.getElementById("autoCalculate");
   autoCalculate.addEventListener("change",()=>{writeLocal(storageKeys.autoCalculate,autoCalculate.checked);showToast(autoCalculate.checked?"Automatic results enabled":"Automatic results disabled");});
   let autoTimer;
-  form.addEventListener("input",e=>{let changed=e.target;if(changed.matches(".smart-slider[data-range-for]")){const linked=document.getElementById(changed.dataset.rangeFor);if(linked){linked.value=changed.value;changed=linked;}}else if(changed.matches("input[type=number]")){const slider=form.querySelector(`.smart-slider[data-range-for="${changed.id}"]`);if(slider&&changed.value!=="")slider.value=changed.value;}changed.removeAttribute("aria-invalid");if(!autoCalculate.checked||e.target===autoCalculate)return;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(formIsReady(form))calculate(calc,false);},450);});
+  form.addEventListener("input",e=>{let changed=e.target;if(changed.matches(".smart-slider[data-range-for]")){const linked=document.getElementById(changed.dataset.rangeFor);if(linked){linked.value=changed.value;changed=linked;}}else if(changed.matches("input[type=number]")){const slider=form.querySelector(`.smart-slider[data-range-for="${changed.id}"]`);if(slider&&changed.value!=="")slider.value=changed.value;}changed.removeAttribute("aria-invalid");updateFormattedValues(form);syncPresetButtons(form);updateTaxRegimeFields(calc);if(!autoCalculate.checked||e.target===autoCalculate)return;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(formIsReady(form))calculate(calc,false);},450);});
   document.getElementById("copyResult").addEventListener("click", copyResult);
   document.getElementById("shareCalculator").addEventListener("click", shareCalculator);
   document.getElementById("editValues").addEventListener("click",()=>{const first=form.querySelector("input:not([type=checkbox]), select");form.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>first?.focus(),300);});
@@ -311,6 +360,7 @@ function calculate(calc, focusResult = true) {
     if(!result || /NaN|Infinity/.test(result.value))throw new Error("Check the values and try again.");
     document.getElementById("resultValue").textContent=result.value;
     document.getElementById("resultDetail").textContent=result.detail;
+    state.chart=result.chart||null;renderBreakdownChart(state.chart);
     const box=document.getElementById("resultBox");box.hidden=false;if(focusResult)box.focus();
     state.resultText=`${calc.name}: ${result.value}. ${result.detail}`;
     state.resultValue=result.value;
