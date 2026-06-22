@@ -33,7 +33,7 @@ const calculators = [
 const popularSlugs = ["emi-calculator","sip-calculator","percentage-calculator","bmi-calculator"];
 const grids = { "India Finance":"indiaGrid", International:"internationalGrid", Student:"studentGrid", Health:"healthGrid" };
 const state = { current: null, resultText: "", subjectCount: 5, currency: "" };
-const storageKeys = { favorites:"allcalco-favorites", recent:"allcalco-recent", history:"allcalco-history", currency:"allcalco-currency" };
+const storageKeys = { favorites:"allcalco-favorites", recent:"allcalco-recent", history:"allcalco-history", currency:"allcalco-currency", autoCalculate:"allcalco-auto-calculate" };
 const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
 const getFavorites = () => readLocal(storageKeys.favorites);
@@ -54,6 +54,8 @@ function renderPersonalSections() {
   const recent=readLocal(storageKeys.recent).map(slug=>calculators.find(c=>c.slug===slug)).filter(Boolean).slice(0,8);
   document.getElementById("favoritesList").innerHTML=favorites.length?favorites.map(personalItemMarkup).join(""):`<p class="personal-empty">Use the heart on any calculator to save it here.</p>`;
   document.getElementById("recentList").innerHTML=recent.length?recent.map(personalItemMarkup).join(""):`<p class="personal-empty">Calculators you open will appear here.</p>`;
+  document.getElementById("clearFavorites").disabled=!favorites.length;
+  document.getElementById("clearRecent").disabled=!recent.length;
 }
 
 function toggleFavorite(slug) {
@@ -61,6 +63,7 @@ function toggleFavorite(slug) {
   writeLocal(storageKeys.favorites,next);
   document.querySelectorAll(`[data-favorite="${slug}"]`).forEach(button=>{const active=next.includes(slug),calc=calculators.find(c=>c.slug===slug);button.textContent=active?"♥":"♡";button.setAttribute("aria-pressed",String(active));button.setAttribute("aria-label",`${active?"Remove":"Add"} ${calc.name} ${active?"from":"to"} favorites`);});
   renderPersonalSections();
+  showToast(next.includes(slug)?"Added to favorites":"Removed from favorites");
 }
 
 function syncFavoriteButtons() {
@@ -104,6 +107,16 @@ function applyCurrencyDisplay(result) {
   return {value:result.value.replace(/[₹$£€]/g,symbol),detail:result.detail.replace(/[₹$£€]/g,symbol)};
 }
 
+function calculatorPreferencesMarkup() {
+  const enabled=readLocal(storageKeys.autoCalculate,true)!==false;
+  return `<div class="calculator-preferences"><span>Calculation settings</span><label class="toggle-control"><input id="autoCalculate" type="checkbox" ${enabled?"checked":""}><span aria-hidden="true"></span>Update results automatically</label></div>`;
+}
+
+function showToast(message) {
+  const toast=document.getElementById("toast");
+  toast.textContent=message;toast.hidden=false;clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toast.hidden=true,2200);
+}
+
 function workedExampleMarkup(calc) {
   if(calc.custom==="cgpa")return `<h3>Worked example</h3><p>Suppose three subjects have 4 credits each and grade points of 8, 9 and 8. Their total credit points are 32 + 36 + 32 = 100. Divide 100 by 12 total credits to get a CGPA of <strong>8.33</strong>.</p>`;
   try {
@@ -144,6 +157,8 @@ function renderHistory(calc) {
 
 function saveHistory(calc, result) {
   const history=readLocal(storageKeys.history);
+  const latest=history[0];
+  if(latest?.slug===calc.slug&&latest.value===result.value&&latest.detail===result.detail)return;
   history.unshift({slug:calc.slug,value:result.value,detail:result.detail,time:new Date().toISOString()});
   writeLocal(storageKeys.history,history.slice(0,30));
   renderHistory(calc);
@@ -175,18 +190,18 @@ function renderCalculator(calc) {
   const faq = faqFor(calc);
   document.getElementById("faqSchema").textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":faq.faqs.map(([q,a])=>({"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}}))});
   const view = document.getElementById("calculatorView");
-  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><p class="result-value" id="resultValue"></p><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="copyResult">Copy Result</button><button class="button button-secondary" type="button" id="shareCalculator">Share Calculator</button></div></section>`;
+  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><p class="result-value" id="resultValue"></p><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="copyResult">Copy result</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
   const relatedMarkup = `<section class="content-card"><h2>Related calculators</h2><div class="related-links">${related.map(c=>`<a href="#${c.slug}">${c.name}</a>`).join("")}</div></section>${historyMarkup(calc)}`;
   const ad = `<div class="ad-placeholder detail-ad"><span>Advertisement Placeholder</span><!-- AdSense Ad Placeholder --></div>`;
   let body;
   if (calc.custom === "cgpa") {
-    body = `${ad}<section class="tool-card cgpa-tool-card"><form id="calculatorForm" novalidate><div class="cgpa-form-content">${cgpaMarkup()}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row"><button class="button button-primary" type="submit">Calculate CGPA</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}</section>${ad}${quickCgpaMarkup()}<div class="content-column detail-content">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div>`;
+    body = `${ad}<section class="tool-card cgpa-tool-card"><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}<div class="cgpa-form-content">${cgpaMarkup()}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate CGPA</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}</section>${ad}${quickCgpaMarkup()}<div class="content-column detail-content">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div>`;
   } else {
-    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${currencyControlMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder"><span>Advertisement</span><!-- AdSense Ad Placeholder --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
+    body = `${ad}<div class="calculator-layout"><section class="tool-card"><h2>Enter your details</h2><form id="calculatorForm" novalidate>${calculatorPreferencesMarkup()}${currencyControlMarkup(calc)}<div class="fields-grid">${calc.fields.map(fieldMarkup).join("")}</div><p class="error-message" id="formError" role="alert"></p><div class="button-row comfort-actions"><button class="button button-primary" type="submit">Calculate</button><button class="button button-secondary" id="loadExample" type="button">Try example</button><button class="button button-secondary" type="reset">Reset</button></div></form>${result}<div class="ad-placeholder"><span>Advertisement</span><!-- AdSense Ad Placeholder --></div></section><div class="content-column">${guideMarkup(calc)}${faq.markup}${relatedMarkup}</div></div>`;
   }
   const eyebrow = calc.category === "Student" ? "✣ &nbsp; Academic excellence" : `✣ &nbsp; ${calc.category}`;
   const favorite=isFavorite(calc.slug);
-  view.innerHTML = `<div class="detail-shell">${detailSidebarMarkup(calc)}<div class="detail-main"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#home">Home</a><span>/</span><span>${calc.name}</span></nav><header class="calculator-header"><button class="detail-favorite" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${favorite?"♥":"♡"}</button><span class="card-tag">${eyebrow}</span><h1>Professional ${calc.name}</h1><p>${calc.desc} Designed for clarity, accuracy, and easy comparison.</p></header>${body}</div></div>`;
+  view.innerHTML = `<div class="detail-shell">${detailSidebarMarkup(calc)}<div class="detail-main"><a class="detail-back" href="#home">← All calculators</a><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="#home">Home</a><span>/</span><span>${calc.name}</span></nav><header class="calculator-header"><button class="detail-favorite" type="button" data-favorite="${calc.slug}" aria-label="${favorite?"Remove":"Add"} ${calc.name} ${favorite?"from":"to"} favorites" aria-pressed="${favorite}">${favorite?"♥":"♡"}</button><span class="card-tag">${eyebrow}</span><h1>Professional ${calc.name}</h1><p>${calc.desc} Designed for clarity, accuracy, and easy comparison.</p></header>${body}</div></div>`;
   document.getElementById("homeView").hidden = true;
   document.querySelector(".info-pages").hidden = true;
   view.hidden = false;
@@ -201,6 +216,25 @@ function renderSubjectRows(count) {
   document.getElementById("subjectRows").innerHTML = Array.from({length:state.subjectCount},(_,i)=>subjectRow(i)).join("");
 }
 
+function formIsReady(form) {
+  return [...form.querySelectorAll("input[required], select[required]")].every(input=>input.value!==""&&input.checkValidity());
+}
+
+function fillExample(calc, form) {
+  form.reset();
+  setTimeout(()=>{
+    if(calc.custom==="cgpa"){
+      renderSubjectRows(5);
+      const labels=["Mathematics","Science","English","Computing","Elective"],grades=[8,9,8.5,9,7.5];
+      document.querySelectorAll(".subject-label").forEach((input,index)=>input.value=labels[index]);
+      document.querySelectorAll(".subject-grade").forEach((input,index)=>input.value=grades[index]);
+      document.querySelectorAll(".subject-credit").forEach(input=>input.value=4);
+    }
+    form.requestSubmit();
+    showToast("Example values loaded");
+  },20);
+}
+
 function wireCalculator(calc) {
   const form = document.getElementById("calculatorForm");
   if (calc.custom === "cgpa") {
@@ -211,16 +245,23 @@ function wireCalculator(calc) {
   }
   const currencySelect=document.getElementById("currencySelect");
   if(currencySelect){const updateCurrency=()=>{state.currency=currencySelect.value;writeLocal(storageKeys.currency,state.currency);const symbol={INR:"₹",USD:"$",GBP:"£",EUR:"€"}[state.currency];document.querySelectorAll(".money-affix").forEach(item=>item.textContent=symbol);["resultValue","resultDetail"].forEach(id=>{const item=document.getElementById(id);if(item)item.textContent=item.textContent.replace(/[₹$£€]/g,symbol);});state.resultText=state.resultText.replace(/[₹$£€]/g,symbol);};updateCurrency();currencySelect.addEventListener("change",updateCurrency);}
-  form.addEventListener("submit", e => { e.preventDefault(); calculate(calc); });
+  form.addEventListener("submit", e => { e.preventDefault(); calculate(calc,true); });
   form.addEventListener("reset", () => setTimeout(() => { document.getElementById("resultBox").hidden = true; document.getElementById("formError").textContent = ""; if(calc.custom === "cgpa")renderSubjectRows(5); },0));
+  document.getElementById("loadExample").addEventListener("click",()=>fillExample(calc,form));
+  const autoCalculate=document.getElementById("autoCalculate");
+  autoCalculate.addEventListener("change",()=>{writeLocal(storageKeys.autoCalculate,autoCalculate.checked);showToast(autoCalculate.checked?"Automatic results enabled":"Automatic results disabled");});
+  let autoTimer;
+  form.addEventListener("input",e=>{e.target.removeAttribute("aria-invalid");if(!autoCalculate.checked||e.target===autoCalculate)return;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(formIsReady(form))calculate(calc,false);},450);});
   document.getElementById("copyResult").addEventListener("click", copyResult);
   document.getElementById("shareCalculator").addEventListener("click", shareCalculator);
-  document.getElementById("clearHistory").addEventListener("click",()=>{writeLocal(storageKeys.history,readLocal(storageKeys.history).filter(item=>item.slug!==calc.slug));renderHistory(calc);});
+  document.getElementById("editValues").addEventListener("click",()=>{const first=form.querySelector("input:not([type=checkbox]), select");form.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>first?.focus(),300);});
+  document.getElementById("clearHistory").addEventListener("click",()=>{writeLocal(storageKeys.history,readLocal(storageKeys.history).filter(item=>item.slug!==calc.slug));renderHistory(calc);showToast("Calculation history cleared");});
 }
 
-function calculate(calc) {
+function calculate(calc, focusResult = true) {
   const error = document.getElementById("formError");
   error.textContent = "";
+  document.querySelectorAll("#calculatorForm [aria-invalid=true]").forEach(input=>input.removeAttribute("aria-invalid"));
   try {
     let result;
     if (calc.custom === "cgpa") {
@@ -242,23 +283,23 @@ function calculate(calc) {
     if(!result || /NaN|Infinity/.test(result.value))throw new Error("Check the values and try again.");
     document.getElementById("resultValue").textContent=result.value;
     document.getElementById("resultDetail").textContent=result.detail;
-    const box=document.getElementById("resultBox");box.hidden=false;box.focus();
+    const box=document.getElementById("resultBox");box.hidden=false;if(focusResult)box.focus();
     state.resultText=`${calc.name}: ${result.value}. ${result.detail}`;
     saveHistory(calc,result);
-  } catch (err) { error.textContent=err.message; document.getElementById("resultBox").hidden=true; }
+  } catch (err) { error.textContent=err.message; document.getElementById("resultBox").hidden=true;const invalid=[...document.querySelectorAll("#calculatorForm input[required]")].find(input=>input.value===""||!input.checkValidity());if(invalid){invalid.setAttribute("aria-invalid","true");if(focusResult)invalid.focus();} }
 }
 
 async function copyResult() {
   const button=document.getElementById("copyResult");
-  try { await navigator.clipboard.writeText(state.resultText); button.textContent="Copied!"; } catch { button.textContent="Copy unavailable"; }
-  setTimeout(()=>button.textContent="Copy Result",1600);
+  try { await navigator.clipboard.writeText(state.resultText); button.textContent="Copied!"; showToast("Result copied to clipboard"); } catch { button.textContent="Copy unavailable"; showToast("Clipboard access is unavailable"); }
+  setTimeout(()=>button.textContent="Copy result",1600);
 }
 
 async function shareCalculator() {
   const data={title:`${state.current.name} | AllCalco`,text:state.resultText||state.current.desc,url:location.href};
-  if(navigator.share){try{await navigator.share(data);}catch(err){if(err.name!=="AbortError")copyLink();}}else copyLink();
+  if(navigator.share){try{await navigator.share(data);showToast("Result shared");}catch(err){if(err.name!=="AbortError")copyLink();}}else copyLink();
 }
-async function copyLink(){const b=document.getElementById("shareCalculator");try{await navigator.clipboard.writeText(location.href);b.textContent="Link copied!";}catch{b.textContent="Share unavailable";}setTimeout(()=>b.textContent="Share Calculator",1600);}
+async function copyLink(){const b=document.getElementById("shareCalculator");try{await navigator.clipboard.writeText(location.href);b.textContent="Link copied!";showToast("Calculator link copied");}catch{b.textContent="Share unavailable";showToast("Sharing is unavailable");}setTimeout(()=>b.textContent="Share result",1600);}
 
 function showHome(target) {
   state.current=null; document.title="AllCalco - Fast Free Online Calculators";
@@ -290,6 +331,15 @@ function setupHeaderSearch() {
 
 function setupPersonalization() {
   document.addEventListener("click",e=>{const button=e.target.closest("[data-favorite]");if(!button)return;e.preventDefault();e.stopPropagation();toggleFavorite(button.dataset.favorite);});
+  document.getElementById("clearFavorites").addEventListener("click",()=>{writeLocal(storageKeys.favorites,[]);syncFavoriteButtons();renderPersonalSections();showToast("Favorites cleared");});
+  document.getElementById("clearRecent").addEventListener("click",()=>{writeLocal(storageKeys.recent,[]);renderPersonalSections();showToast("Recent calculators cleared");});
+}
+
+function setupConvenienceControls() {
+  const scrollButton=document.getElementById("scrollTop");
+  const update=()=>scrollButton.hidden=window.scrollY<500;
+  window.addEventListener("scroll",update,{passive:true});update();
+  scrollButton.addEventListener("click",()=>window.scrollTo({top:0,behavior:"smooth"}));
 }
 
 function setupTheme() {
@@ -309,4 +359,4 @@ function setupPWA() {
   if("serviceWorker" in navigator && location.protocol.startsWith("http"))navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
 }
 
-renderDirectory();setupSearch();setupHeaderSearch();setupTheme();setupPersonalization();setupPWA();document.getElementById("currentYear").textContent=new Date().getFullYear();window.addEventListener("hashchange",route);route();
+renderDirectory();setupSearch();setupHeaderSearch();setupTheme();setupPersonalization();setupConvenienceControls();setupPWA();document.getElementById("currentYear").textContent=new Date().getFullYear();window.addEventListener("hashchange",route);route();

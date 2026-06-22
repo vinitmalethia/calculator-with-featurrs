@@ -63,8 +63,8 @@
 
           <div class="directory" id="all-calculators">
             <section class="personal-sections" aria-label="Your calculators">
-              <div class="personal-panel" id="favoritesPanel"><div class="personal-heading"><h2>Favorites</h2><span>Saved on this device</span></div><div class="personal-list" id="favoritesList"></div></div>
-              <div class="personal-panel" id="recentPanel"><div class="personal-heading"><h2>Recently Used</h2><span>Your latest tools</span></div><div class="personal-list" id="recentList"></div></div>
+              <div class="personal-panel" id="favoritesPanel"><div class="personal-heading"><div><h2>Favorites</h2><span>Saved on this device</span></div><button class="panel-clear" id="clearFavorites" type="button">Clear</button></div><div class="personal-list" id="favoritesList"></div></div>
+              <div class="personal-panel" id="recentPanel"><div class="personal-heading"><div><h2>Recently Used</h2><span>Your latest tools</span></div><button class="panel-clear" id="clearRecent" type="button">Clear</button></div><div class="personal-list" id="recentList"></div></div>
             </section>
             <section class="category-section popular-section" data-category="Popular">
               <div class="section-heading"><div><h2>Popular Tools</h2></div><a href="#all-calculators">View all</a></div>
@@ -112,5 +112,7 @@
     <nav aria-label="Footer navigation"><a href="#privacy">Privacy Policy</a><a href="#terms">Terms &amp; Conditions</a><a href="#contact">Contact</a><a href="#about">About Us</a></nav>
     <p>© <span id="currentYear"></span> AllCalco. All rights reserved.</p>
   </footer>
+  <button class="scroll-top" id="scrollTop" type="button" aria-label="Back to top" hidden>↑</button>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
