@@ -32,7 +32,7 @@ const calculators = [
 
 const popularSlugs = ["emi-calculator","sip-calculator","percentage-calculator","bmi-calculator"];
 const grids = { "India Finance":"indiaGrid", International:"internationalGrid", Student:"studentGrid", Health:"healthGrid" };
-const state = { current: null, resultText: "", subjectCount: 5, currency: "" };
+const state = { current: null, resultText: "", resultValue: "", subjectCount: 5, currency: "" };
 const storageKeys = { favorites:"allcalco-favorites", recent:"allcalco-recent", history:"allcalco-history", currency:"allcalco-currency", autoCalculate:"allcalco-auto-calculate" };
 const readLocal = (key, fallback = []) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; } };
 const writeLocal = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be unavailable in private contexts. */ } };
@@ -88,11 +88,32 @@ function renderDirectory() {
   syncFavoriteButtons();
 }
 
+function sliderConfig(f) {
+  if(f.type!=="number")return null;
+  const label=`${f.id} ${f.label}`.toLowerCase(),value=Number(f.value)||0,min=Number(f.min??0);
+  let max=Number(f.max)||0;
+  if(!max){
+    if(/rate|percent|raise|target/.test(label))max=100;
+    else if(/year|tenure|term/.test(label))max=40;
+    else if(/week/.test(label))max=52;
+    else if(/hour/.test(label))max=100;
+    else if(/credit/.test(label))max=30;
+    else if(/income|amount|principal|salary|price|down|pay|monthly|deposit|investment/.test(label))max=Math.max(value*5,/monthly/.test(label)?100000:1000000);
+    else max=Math.max(value*5,100);
+  }
+  let step=f.step!=="any"&&f.step!==undefined?Number(f.step):1;
+  if(/rate|percent|raise|cgpa|sgpa|grade/.test(label))step=.1;
+  else if(max>=1000000)step=10000;
+  else if(max>=10000)step=100;
+  return {min,max,step,value:Math.min(max,Math.max(min,value))};
+}
+
 function fieldMarkup(f) {
   if (f.type === "select") return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell"><select id="${f.id}" name="${f.id}">${f.options.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></div></div>`;
   const affix = f.suffix ? `<span class="input-affix">${f.suffix}</span>` : "";
   const prefix = f.prefix ? `<span class="input-affix money-affix" style="border-left:0;border-right:1px solid var(--border)">${f.prefix}</span>` : "";
-  return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell">${prefix}<input id="${f.id}" name="${f.id}" type="${f.type}" value="${f.value ?? ""}" ${f.type === "number" ? `min="${f.min ?? 0}" ${f.max ? `max="${f.max}"` : ""} step="${f.step ?? "any"}" inputmode="decimal"` : ""} required>${affix}</div></div>`;
+  const slider=sliderConfig(f);
+  return `<div class="field"><label for="${f.id}">${f.label}</label><div class="input-shell">${prefix}<input id="${f.id}" name="${f.id}" type="${f.type}" value="${f.value ?? ""}" ${f.type === "number" ? `min="${f.min ?? 0}" ${f.max ? `max="${f.max}"` : ""} step="${f.step ?? "any"}" inputmode="decimal"` : ""} required>${affix}</div>${slider?`<input class="smart-slider" type="range" data-range-for="${f.id}" min="${slider.min}" max="${slider.max}" step="${slider.step}" value="${slider.value}" aria-label="Adjust ${f.label}">`:""}</div>`;
 }
 
 function currencyControlMarkup(calc) {
@@ -133,7 +154,7 @@ function cgpaMarkup() {
 }
 
 function subjectRow(index) {
-  return `<div class="subject-row"><div class="field"><label class="sr-only" for="subject${index}">Subject ${index + 1} label</label><div class="input-shell"><input id="subject${index}" class="subject-label" type="text" placeholder="e.g. Mathematics"></div></div><div class="field"><label class="sr-only" for="grade${index}">Subject ${index + 1} grade points</label><div class="input-shell"><input id="grade${index}" class="subject-grade" type="number" min="0" max="10" step="0.01" placeholder="Points" required></div></div><div class="field"><label class="sr-only" for="credits${index}">Subject ${index + 1} credits</label><div class="input-shell"><input id="credits${index}" class="subject-credit" type="number" min="0.5" step="0.5" placeholder="Credits" required></div></div></div>`;
+  return `<div class="subject-row"><div class="field"><label class="sr-only" for="subject${index}">Subject ${index + 1} label</label><div class="input-shell"><input id="subject${index}" class="subject-label" type="text" placeholder="e.g. Mathematics"></div></div><div class="field"><label class="sr-only" for="grade${index}">Subject ${index + 1} grade points</label><div class="input-shell"><input id="grade${index}" class="subject-grade" type="number" min="0" max="10" step="0.01" placeholder="Points" required></div><input class="smart-slider subject-slider" type="range" data-range-for="grade${index}" min="0" max="10" step="0.1" value="0" aria-label="Adjust subject ${index + 1} grade points"></div><div class="field"><label class="sr-only" for="credits${index}">Subject ${index + 1} credits</label><div class="input-shell"><input id="credits${index}" class="subject-credit" type="number" min="0.5" step="0.5" placeholder="Credits" required></div><input class="smart-slider subject-slider" type="range" data-range-for="credits${index}" min="0.5" max="10" step="0.5" value="0.5" aria-label="Adjust subject ${index + 1} credits"></div></div>`;
 }
 
 function detailSidebarMarkup(calc) {
@@ -183,6 +204,7 @@ function faqFor(calc) {
 function renderCalculator(calc) {
   state.current = calc;
   state.resultText = "";
+  state.resultValue = "";
   state.currency = "";
   recordRecent(calc.slug);
   document.title = `${calc.name} - Free Online Tool | AllCalco`;
@@ -191,7 +213,7 @@ function renderCalculator(calc) {
   const faq = faqFor(calc);
   document.getElementById("faqSchema").textContent = JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":faq.faqs.map(([q,a])=>({"@type":"Question","name":q,"acceptedAnswer":{"@type":"Answer","text":a}}))});
   const view = document.getElementById("calculatorView");
-  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><p class="result-value" id="resultValue"></p><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="copyResult">Copy result</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
+  const result = `<section class="result-box" id="resultBox" hidden tabindex="-1"><p class="result-label">Your result</p><div class="result-value-row"><p class="result-value" id="resultValue"></p><button class="result-copy" type="button" id="copyResult" aria-label="Copy result" title="Copy result">${iconSvg("clipboard")}</button></div><p class="result-detail" id="resultDetail"></p><div class="result-actions"><button class="button button-secondary" type="button" id="editValues">Edit values</button><button class="button button-secondary" type="button" id="shareCalculator">Share result</button></div></section>`;
   const relatedMarkup = `<section class="content-card"><h2>Related calculators</h2><div class="related-links">${related.map(c=>`<a href="#${c.slug}">${c.name}</a>`).join("")}</div></section>${historyMarkup(calc)}`;
   const ad = `<div class="ad-placeholder detail-ad" data-ad-slot="calculator-detail"><!-- Ad network content is injected only when active. --></div>`;
   let body;
@@ -221,6 +243,10 @@ function formIsReady(form) {
   return [...form.querySelectorAll("input[required], select[required]")].every(input=>input.value!==""&&input.checkValidity());
 }
 
+function syncAllSliders(form) {
+  form.querySelectorAll(".smart-slider[data-range-for]").forEach(slider=>{const input=document.getElementById(slider.dataset.rangeFor);if(input&&input.value!=="")slider.value=input.value;});
+}
+
 function fillExample(calc, form) {
   form.reset();
   setTimeout(()=>{
@@ -231,6 +257,7 @@ function fillExample(calc, form) {
       document.querySelectorAll(".subject-grade").forEach((input,index)=>input.value=grades[index]);
       document.querySelectorAll(".subject-credit").forEach(input=>input.value=4);
     }
+    syncAllSliders(form);
     form.requestSubmit();
     showToast("Example values loaded");
   },20);
@@ -252,7 +279,7 @@ function wireCalculator(calc) {
   const autoCalculate=document.getElementById("autoCalculate");
   autoCalculate.addEventListener("change",()=>{writeLocal(storageKeys.autoCalculate,autoCalculate.checked);showToast(autoCalculate.checked?"Automatic results enabled":"Automatic results disabled");});
   let autoTimer;
-  form.addEventListener("input",e=>{e.target.removeAttribute("aria-invalid");if(!autoCalculate.checked||e.target===autoCalculate)return;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(formIsReady(form))calculate(calc,false);},450);});
+  form.addEventListener("input",e=>{let changed=e.target;if(changed.matches(".smart-slider[data-range-for]")){const linked=document.getElementById(changed.dataset.rangeFor);if(linked){linked.value=changed.value;changed=linked;}}else if(changed.matches("input[type=number]")){const slider=form.querySelector(`.smart-slider[data-range-for="${changed.id}"]`);if(slider&&changed.value!=="")slider.value=changed.value;}changed.removeAttribute("aria-invalid");if(!autoCalculate.checked||e.target===autoCalculate)return;clearTimeout(autoTimer);autoTimer=setTimeout(()=>{if(formIsReady(form))calculate(calc,false);},450);});
   document.getElementById("copyResult").addEventListener("click", copyResult);
   document.getElementById("shareCalculator").addEventListener("click", shareCalculator);
   document.getElementById("editValues").addEventListener("click",()=>{const first=form.querySelector("input:not([type=checkbox]), select");form.scrollIntoView({behavior:"smooth",block:"center"});setTimeout(()=>first?.focus(),300);});
@@ -286,14 +313,15 @@ function calculate(calc, focusResult = true) {
     document.getElementById("resultDetail").textContent=result.detail;
     const box=document.getElementById("resultBox");box.hidden=false;if(focusResult)box.focus();
     state.resultText=`${calc.name}: ${result.value}. ${result.detail}`;
+    state.resultValue=result.value;
     saveHistory(calc,result);
   } catch (err) { error.textContent=err.message; document.getElementById("resultBox").hidden=true;const invalid=[...document.querySelectorAll("#calculatorForm input[required]")].find(input=>input.value===""||!input.checkValidity());if(invalid){invalid.setAttribute("aria-invalid","true");if(focusResult)invalid.focus();} }
 }
 
 async function copyResult() {
   const button=document.getElementById("copyResult");
-  try { await navigator.clipboard.writeText(state.resultText); button.textContent="Copied!"; showToast("Result copied to clipboard"); } catch { button.textContent="Copy unavailable"; showToast("Clipboard access is unavailable"); }
-  setTimeout(()=>button.textContent="Copy result",1600);
+  try { await navigator.clipboard.writeText(state.resultValue); button.classList.add("is-copied");button.setAttribute("aria-label","Result copied");showToast("Result copied to clipboard"); } catch { showToast("Clipboard access is unavailable"); }
+  setTimeout(()=>{button.classList.remove("is-copied");button.setAttribute("aria-label","Copy result");},1600);
 }
 
 async function shareCalculator() {
