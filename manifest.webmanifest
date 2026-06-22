@@ -1,6 +1,6 @@
 {
-  "name": "AllCalc - Professional Calculators",
-  "short_name": "AllCalc",
+  "name": "AllCalco - Professional Calculators",
+  "short_name": "AllCalco",
   "description": "Fast calculators for finance, students, health and everyday decisions.",
   "start_url": "./index.html#home",
   "scope": "./",
